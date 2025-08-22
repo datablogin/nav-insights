@@ -1,0 +1,20 @@
+
+---
+- id: BROAD_TOO_HIGH_LOW_QS
+  description: "Broad match dominates with low Quality Score pockets"
+  if_all:
+    - expr: 'value("aggregates.match_type.broad_pct") >= 0.40'
+    - expr: 'value("aggregates.quality_score.p25") < 5'
+  action:
+    type: "tighten_match_types"
+    target: "top_broad_by_cost"
+    params:
+      limit: 25
+      new_match: "phrase"
+  justification_template: >
+    Broad share is {{ pct(value("aggregates.match_type.broad_pct")) }} with QS p25 at {{ value("aggregates.quality_score.p25") }}.
+    Tighten top {{ action.params.limit }} broad terms to {{ action.params.new_match }} to reduce waste.
+  expected_impact:
+    spend_savings_usd: 'value("metrics.wasted_spend_top_broad")'
+    risk: "low"
+  priority: 1

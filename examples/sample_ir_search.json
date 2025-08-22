@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-08-22T12:00:00Z",
+  "account": {
+    "account_id": "123-456-7890",
+    "account_name": "ACME Retail"
+  },
+  "date_range": {
+    "start_date": "2025-07-01",
+    "end_date": "2025-07-31"
+  },
+  "totals": {
+    "spend_usd": "50000.0",
+    "clicks": 82000,
+    "impressions": 2100000,
+    "conversions": "1200",
+    "revenue_usd": "240000.0"
+  },
+  "aggregates": {
+    "match_type": {
+      "broad_pct": 0.52
+    },
+    "quality_score": {
+      "p25": 4.3
+    }
+  },
+  "pmax": {
+    "overlap_share": 0.23,
+    "delta_roas_vs_search": -0.18,
+    "wasted_spend_overlap": "1300.0"
+  },
+  "geo": {
+    "low_cr_outliers_count": 4,
+    "savings_estimate": "900.0"
+  },
+  "findings": [],
+  "completeness": {}
+}

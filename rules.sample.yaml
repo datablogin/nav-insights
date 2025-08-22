@@ -1,0 +1,77 @@
+# Sample decision-table style rules for PaidSearchNav
+# Evaluate each rule against the AuditFindings object.
+# Expressions use the helper function value("path.like.this") to access nested numbers.
+# If `if_all` are true, emit the given action with templated justification.
+#
+# NOTE: This is a *starter* set. You should expand, test, and version this file.
+---
+- id: BROAD_TOO_HIGH_LOW_QS
+  description: "Broad match dominates with low Quality Score pockets"
+  if_all:
+    - expr: 'value("aggregates.match_type.broad_pct") >= 0.40'
+    - expr: 'value("aggregates.quality_score.p25") < 5'
+  action:
+    type: "tighten_match_types"
+    target: "top_broad_by_cost"
+    params:
+      limit: 25
+      new_match: "phrase"
+  justification_template: >
+    Broad share is {{ pct(value("aggregates.match_type.broad_pct")) }} with QS p25 at {{ value("aggregates.quality_score.p25") }}.
+    Tighten top {{ action.params.limit }} broad terms to {{ action.params.new_match }} to reduce waste.
+  expected_impact:
+    spend_savings_usd: 'value("metrics.wasted_spend_top_broad")'
+    risk: "low"
+  priority: 1
+
+- id: NEGATIVE_CONFLICT_BLOCKING_WINNERS
+  description: "An existing negative is blocking a converting query/keyword"
+  if_all:
+    - expr: 'value("conflicts.negatives_blocking_converters_count") > 0'
+  action:
+    type: "add_negatives"
+    target: "conflict_list_review"
+    params:
+      mode: "fix_conflicts"   # remove/relax conflicting negatives where safe
+  justification_template: >
+    Found {{ value("conflicts.negatives_blocking_converters_count") }} negatives blocking converting traffic.
+    Review and relax conflicts to recover volume without new spend.
+  expected_impact:
+    revenue_lift_usd: 'value("metrics.blocked_revenue_estimate")'
+    risk: "medium"
+  priority: 1
+
+- id: PMAX_QUERY_CANNIBALIZATION
+  description: "PMax search terms overlapping with Search campaigns at worse ROAS"
+  if_all:
+    - expr: 'value("pmax.overlap_share") >= 0.20'
+    - expr: 'value("pmax.delta_roas_vs_search") < -0.15'
+  action:
+    type: "cap_pmax"
+    target: "overlapping_terms"
+    params:
+      cap_pct: 0.8
+  justification_template: >
+    PMax overlaps {{ pct(value("pmax.overlap_share")) }} of search queries with {{ pct(value("pmax.delta_roas_vs_search")) }} worse ROAS.
+    Cap PMax on overlapping terms to protect efficient search.
+  expected_impact:
+    spend_savings_usd: 'value("pmax.wasted_spend_overlap")'
+    risk: "low"
+  priority: 2
+
+- id: GEO_WASTE_OUTLIERS
+  description: "Geo regions with high spend and below-benchmark conv rate"
+  if_all:
+    - expr: 'value("geo.low_cr_outliers_count") >= 3'
+  action:
+    type: "geo_exclude"
+    target: "outlier_regions"
+    params:
+      max_regions: 10
+  justification_template: >
+    Identified {{ value("geo.low_cr_outliers_count") }} geo outliers with high spend and low CR.
+    Exclude or downbid up to {{ action.params.max_regions }} regions to reallocate budget.
+  expected_impact:
+    spend_savings_usd: 'value("geo.savings_estimate")'
+    risk: "low"
+  priority: 3

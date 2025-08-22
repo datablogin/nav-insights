@@ -1,0 +1,51 @@
+[
+  {
+    "id": "A1",
+    "type": "tighten_match_types",
+    "target": "top_broad_by_cost",
+    "params": {
+      "limit": 25,
+      "new_match": "phrase"
+    },
+    "justification": "Broad share is high with low QS pockets; tighten to phrase.",
+    "expected_impact": {
+      "spend_savings_usd": 4200.0,
+      "risk": "low"
+    },
+    "priority": 1,
+    "confidence": 0.9,
+    "source_rule_id": "BROAD_TOO_HIGH_LOW_QS"
+  },
+  {
+    "id": "A2",
+    "type": "cap_pmax",
+    "target": "overlapping_terms",
+    "params": {
+      "cap_pct": 0.8
+    },
+    "justification": "PMax overlaps queries at worse ROAS; cap to protect search.",
+    "expected_impact": {
+      "spend_savings_usd": 1300.0,
+      "risk": "low"
+    },
+    "priority": 2,
+    "confidence": 0.85,
+    "source_rule_id": "PMAX_QUERY_CANNIBALIZATION"
+  },
+  {
+    "id": "A3",
+    "type": "geo_exclude",
+    "target": "outlier_regions",
+    "params": {
+      "max_regions": 10
+    },
+    "justification": "Geo outliers with low CR; exclude/downbid.",
+    "expected_impact": {
+      "spend_savings_usd": 900.0,
+      "risk": "low"
+    },
+    "priority": 3,
+    "confidence": 0.85,
+    "source_rule_id": "GEO_WASTE_OUTLIERS"
+  }
+]
