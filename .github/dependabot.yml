@@ -1,18 +1,51 @@
 version: 2
 updates:
+  # Python dependencies
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "python"
+    reviewers:
+      - "@datablogin"
+    # Group ML/AI dependencies to reduce PR noise
+    groups:
+      ml-dependencies:
+        patterns:
+          - "torch*"
+          - "transformers*"
+          - "pydantic*"
+          - "jinja2*"
+          - "openai*"
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "ruff*"
+          - "mypy*"
+    # Allow both direct and indirect updates
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    # Security updates get higher priority
+    target-branch: "main"
     
+  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
     labels:
       - "dependencies"
       - "github-actions"
+    reviewers:
+      - "@datablogin"
+    target-branch: "main"
