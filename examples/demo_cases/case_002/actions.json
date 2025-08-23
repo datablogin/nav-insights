@@ -1,0 +1,36 @@
+[
+  {
+    "id": "R1",
+    "type": "tracking_fix",
+    "target": "tracking_setup",
+    "params": {"checklist": "utm_params, conversions, revenue, call_tracking"},
+    "justification": "Tracking is not complete; fix measurement first.",
+    "expected_impact": {"revenue_lift_usd": 0.0, "risk": "medium"},
+    "priority": 1,
+    "confidence": 0.9,
+    "source_rule_id": "TRACKING_GAPS"
+  },
+  {
+    "id": "R2",
+    "type": "budget_rebalance",
+    "target": "device_bids",
+    "params": {"mobile_down_pct": 0.10},
+    "justification": "Mobile share is high; consider device bid adjustments.",
+    "expected_impact": {"spend_savings_usd": 0.0, "risk": "low"},
+    "priority": 3,
+    "confidence": 0.85,
+    "source_rule_id": "DEVICE_MOBILE_HEAVY"
+  },
+  {
+    "id": "R3",
+    "type": "cap_pmax",
+    "target": "guardrail_terms",
+    "params": {"cap_pct": 0.9},
+    "justification": "Mild PMax overlap present; add guardrail cap.",
+    "expected_impact": {"spend_savings_usd": 0.0, "risk": "low"},
+    "priority": 4,
+    "confidence": 0.85,
+    "source_rule_id": "PMAX_GUARDRAIL_MILD_OVERLAP"
+  }
+]
+
