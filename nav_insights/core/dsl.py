@@ -4,14 +4,17 @@ from typing import Any, Dict
 
 
 def value(path: str, root: Any, default=None) -> Any:
+    """Safely access a dotted path on nested dicts/objects.
+
+    Returns `default` if any segment is missing or None. """
     cur = root
     for part in path.split("."):
+        if cur is None:
+            return default
         if isinstance(cur, dict):
             cur = cur.get(part)
         else:
             cur = getattr(cur, part, None)
-        if cur is None:
-            return default
     return cur if cur is not None else default
 
 

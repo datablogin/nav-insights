@@ -3,15 +3,17 @@ from __future__ import annotations
 import json, time
 from typing import Any, Dict, List, Optional, Sequence, Type, TypeVar
 import requests
+from requests import Session
 from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
 
 class LlamaCppClient:
-    def __init__(self, base_url: str = "http://localhost:8000/v1", model: str = "local", timeout: int = 120):
+    def __init__(self, base_url: str = "http://localhost:8000/v1", model: str = "local", timeout: int = 120, session: Optional[Session] = None):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
+        self.session = session or requests.Session()
 
     def _chat(self, messages: Sequence[Dict[str, str]], max_tokens: int = 512, temperature: float = 0.2,
               response_format: Optional[Dict[str, Any]] = None) -> str:
@@ -24,7 +26,7 @@ class LlamaCppClient:
         }
         if response_format is not None:
             payload["response_format"] = response_format
-        r = requests.post(url, json=payload, timeout=self.timeout)
+        r = self.session.post(url, json=payload, timeout=self.timeout)
         r.raise_for_status()
         data = r.json()
         return data["choices"][0]["message"]["content"]
@@ -71,8 +73,13 @@ class LlamaCppClient:
         return schema_model.parse_obj(data)  # pydantic v1
 
 def compose_insight_json(ir: Any, actions: List[Any], schema_model: Type[T],
-                         base_url: str = "http://localhost:8000/v1", model: str = "local") -> T:
-    client = LlamaCppClient(base_url=base_url, model=model)
+                         base_url: str = "http://localhost:8000/v1", model: str = "local", timeout: Optional[int] = None) -> T:
+    client = LlamaCppClient(base_url=base_url, model=model, timeout=timeout or 120)
     system = "You produce ONLY MINIFIED JSON that validates the provided schema."
-    user = "Given these facts and actions, produce the final Insight JSON.\nFacts:\n" + json.dumps(ir, default=str) +            "\nActions:\n" + json.dumps([a.model_dump() for a in actions], default=str)
+    user = (
+        "Given these facts and actions, produce the final Insight JSON.\nFacts:\n"
+        + json.dumps(ir, default=str)
+        + "\nActions:\n"
+        + json.dumps([a.model_dump() for a in actions], default=str)
+    )
     return client.generate_structured(schema_model, system, user)
