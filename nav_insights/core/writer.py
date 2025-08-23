@@ -96,8 +96,7 @@ class LlamaCppClient:
                     {
                         "role": "system",
                         "content": (
-                            "Previous JSON failed validation: "
-                            f"{ve}. Return corrected JSON only."
+                            f"Previous JSON failed validation: {ve}. Return corrected JSON only."
                         ),
                     }
                 )
