@@ -69,3 +69,52 @@
     spend_savings_usd: 'value("geo.savings_estimate", 0)'
     risk: "low"
   priority: 3
+
+- id: TRACKING_GAPS
+  description: "Tracking appears incomplete or missing; fix attribution before optimization"
+  if_all:
+    - expr: 'value("completeness.tracking_ok", False) == False'
+  action:
+    type: "tracking_fix"
+    target: "tracking_setup"
+    params:
+      checklist: "utm_params, conversions, revenue, call_tracking"
+  justification_template: >
+    Tracking completeness is missing or false. Address measurement first to avoid optimizing on bad signals.
+  expected_impact:
+    revenue_lift_usd: 'value("metrics.attribution_recovery_estimate", 0)'
+    risk: "medium"
+  priority: 1
+
+- id: DEVICE_MOBILE_HEAVY
+  description: "Mobile traffic disproportionately high; consider device bid adjustments"
+  if_all:
+    - expr: 'value("aggregates.devices.mobile", 0.0) >= 0.70'
+  action:
+    type: "budget_rebalance"
+    target: "device_bids"
+    params:
+      mobile_down_pct: 0.10
+  justification_template: >
+    Mobile share is {{ pct(value("aggregates.devices.mobile", 0.0)) }}, which may warrant device bid adjustments or UX review.
+  expected_impact:
+    spend_savings_usd: 0
+    risk: "low"
+  priority: 3
+
+- id: PMAX_GUARDRAIL_MILD_OVERLAP
+  description: "PMax overlap present but not severe; add guardrail before capping"
+  if_all:
+    - expr: 'value("pmax.overlap_share", 0) >= 0.10'
+    - expr: 'value("pmax.delta_roas_vs_search", 0) >= -0.15'
+  action:
+    type: "cap_pmax"
+    target: "guardrail_terms"
+    params:
+      cap_pct: 0.9
+  justification_template: >
+    PMax overlaps {{ pct(value("pmax.overlap_share", 0)) }} of queries with acceptable ROAS delta. Set a guardrail cap to prevent drift.
+  expected_impact:
+    spend_savings_usd: 0
+    risk: "low"
+  priority: 4
