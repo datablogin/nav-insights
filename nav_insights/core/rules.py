@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 from typing import Any, Dict, List
 import yaml
@@ -6,18 +5,24 @@ from jinja2 import Template
 from .dsl import eval_expr, value
 from .actions import Action, ActionImpact
 
+
 def _render(template_str: str, ctx: Dict[str, Any]) -> str:
     def pct(x):
         try:
             return f"{float(x)*100:.0f}%"
         except Exception:
             return "n/a"
+
     def usd(x):
         try:
             return f"${float(x):,.0f}"
         except Exception:
             return "n/a"
-    env = {"pct": pct, "usd": usd, "value": lambda p: value(p, ctx["root"]), "action": ctx.get("action", {})}
+
+    def value_fn(path: str, default=None):
+        return value(path, ctx["root"], default)
+
+    env = {"pct": pct, "usd": usd, "value": value_fn, "action": ctx.get("action", {})}
     return Template(template_str).render(**env)
 
 def _eval_value_or_expr(node: Any, root: Any):
