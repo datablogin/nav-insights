@@ -1,5 +1,8 @@
-import json, pathlib
+import json
+import pathlib
+
 from nav_insights.core.rules import evaluate_rules
+
 
 def test_rules_emit_expected_actions():
     base = pathlib.Path(__file__).parent.parent

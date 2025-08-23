@@ -22,9 +22,13 @@ Notes:
   - If label_insight.json is missing, a *synthetic* minimal Insight is generated
     (valid JSON shape but simple text). Replace with real labels when available.
 """
-import argparse, json, os, random, sys
+import argparse
+import json
+import os
+import random
+import sys
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 def read_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as f:
