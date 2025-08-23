@@ -21,8 +21,10 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
