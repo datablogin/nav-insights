@@ -8,6 +8,7 @@ __all__ = ["LlamaCppClient"]
 if __name__ == "__main__":
     # Optional quick demo
     from nav_insights.core.insight import Insight
+
     client = LlamaCppClient(base_url="http://localhost:8000/v1", model="local")
     system = "You return ONLY minified JSON that validates the provided schema."
     user = "Return an Insight with a placeholder executive summary and no actions."

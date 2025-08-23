@@ -42,7 +42,12 @@ app.add_middleware(
     max_age=600,
 )
 
-DEFAULT_RULES = Path(settings.rules_path) if settings.rules_path else (Path(__file__).parent / "domains" / "paid_search" / "rules" / "default.yaml")
+DEFAULT_RULES = (
+    Path(settings.rules_path)
+    if settings.rules_path
+    else (Path(__file__).parent / "domains" / "paid_search" / "rules" / "default.yaml")
+)
+
 
 # Simple request size limit
 @app.middleware("http")
@@ -56,8 +61,10 @@ async def limit_upload_size(request: Request, call_next):
             pass
     return await call_next(request)
 
+
 # Simple in-memory rate limiting (per-IP, sliding window 60s)
 _rate_buckets: dict[str, deque] = defaultdict(deque)
+
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
@@ -96,12 +103,15 @@ class InsightsRequest(BaseModel):
 @app.post("/v1/insights:compose")
 async def insights_compose(req: InsightsRequest):
     rules_path = str(DEFAULT_RULES)
-    actions = [Action(**a) for a in req.actions] if req.actions else evaluate_rules(req.ir, rules_path)
+    actions = (
+        [Action(**a) for a in req.actions] if req.actions else evaluate_rules(req.ir, rules_path)
+    )
     base_url = req.base_url or settings.writer_base_url
     model = req.model or settings.writer_model
     # Compose via thread to avoid blocking the event loop
     try:
         import anyio
+
         insight = await anyio.to_thread.run_sync(
             compose_insight_json,
             req.ir,

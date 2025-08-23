@@ -6,7 +6,7 @@ from typing import Any, Dict
 def value(path: str, root: Any, default=None) -> Any:
     """Safely access a dotted path on nested dicts/objects.
 
-    Returns `default` if any segment is missing or None. """
+    Returns `default` if any segment is missing or None."""
     cur = root
     for part in path.split("."):
         if cur is None:

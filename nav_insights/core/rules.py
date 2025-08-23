@@ -11,7 +11,7 @@ from .actions import Action, ActionImpact
 def _render(template_str: str, ctx: Dict[str, Any]) -> str:
     def pct(x):
         try:
-            return f"{float(x)*100:.0f}%"
+            return f"{float(x) * 100:.0f}%"
         except Exception:
             return "n/a"
 
@@ -26,6 +26,7 @@ def _render(template_str: str, ctx: Dict[str, Any]) -> str:
 
     env = {"pct": pct, "usd": usd, "value": value_fn, "action": ctx.get("action", {})}
     return Template(template_str).render(**env)
+
 
 def _eval_value_or_expr(node: Any, root: Any):
     if isinstance(node, (int, float, bool)) or node is None:
@@ -59,6 +60,7 @@ def _validate_ruleset(rules: List[Dict[str, Any]]) -> None:
                 raise ValueError(f"Rule {r.get('id')} has invalid condition: {c}")
             # Syntax check only (no evaluation)
             ast.parse(c["expr"], mode="eval")
+
         # Optional: pre-validate expected_impact expression syntax (best-effort)
         def _walk(node: Any):
             if isinstance(node, dict):
@@ -72,6 +74,7 @@ def _validate_ruleset(rules: List[Dict[str, Any]]) -> None:
                     ast.parse(node, mode="eval")
                 except Exception:
                     pass
+
         _walk(r.get("expected_impact", {}))
 
 
@@ -98,7 +101,7 @@ def evaluate_rules(ir: Any, rules_path: str) -> List[Action]:
 
         action_def = r.get("action", {})
         action = {
-            "id": f"{r.get('id')}_ACT_{len(actions)+1}",
+            "id": f"{r.get('id')}_ACT_{len(actions) + 1}",
             "type": action_def.get("type", "other"),
             "target": action_def.get("target", ""),
             "params": action_def.get("params", {}),
