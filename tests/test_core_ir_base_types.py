@@ -27,6 +27,7 @@ from nav_insights.core.ir_base import (
     AuditFindings,
     get_model_json_schema,
     export_all_schemas,
+    DEFAULT_CURRENCY,
 )
 from nav_insights.domains.paid_search.ir import AuditFindingsSearch
 from nav_insights.domains.paid_social.ir import AuditFindingsSocial
@@ -37,9 +38,9 @@ class TestCoreIRTypes:
 
     def test_money_type_with_currency(self):
         """Test Money type stores amount as Decimal with currency code"""
-        # Test default currency (now reads from env at instance creation)
+        # Test default currency
         money = Money(amount=Decimal("1000.50"))
-        assert money.currency == os.getenv("NAV_INSIGHTS_DEFAULT_CURRENCY", "USD")
+        assert money.currency == DEFAULT_CURRENCY
         assert isinstance(money.amount, Decimal)
         assert money.amount == Decimal("1000.50")
 
