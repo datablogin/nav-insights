@@ -2,6 +2,8 @@ from .findings_ir import (
     USD,
     Rate01,
     Pct01,
+    DEFAULT_CURRENCY,
+    Money,
     EntityType,
     EntityRef,
     Evidence,
@@ -14,12 +16,16 @@ from .findings_ir import (
     Totals,
     Aggregates,
     AuditFindings,
+    get_model_json_schema,
+    export_all_schemas,
 )
 
 __all__ = [
     "USD",
     "Rate01",
     "Pct01",
+    "DEFAULT_CURRENCY",
+    "Money",
     "EntityType",
     "EntityRef",
     "Evidence",
@@ -32,4 +38,6 @@ __all__ = [
     "Totals",
     "Aggregates",
     "AuditFindings",
+    "get_model_json_schema",
+    "export_all_schemas",
 ]

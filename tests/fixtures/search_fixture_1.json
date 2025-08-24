@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-08-24T12:00:00Z",
+  "account": {
+    "account_id": "123-456-7890",
+    "account_name": "ACME Retail"
+  },
+  "date_range": {
+    "start_date": "2025-07-01",
+    "end_date": "2025-07-31"
+  },
+  "totals": {
+    "spend": {
+      "amount": "50000.0",
+      "currency": "USD"
+    },
+    "clicks": 82000,
+    "impressions": 2100000,
+    "conversions": "1200.0",
+    "revenue": {
+      "amount": "240000.0",
+      "currency": "USD"
+    },
+    "spend_usd": "50000.0",
+    "revenue_usd": "240000.0"
+  },
+  "aggregates": {
+    "match_type": {
+      "broad_pct": 0.52,
+      "phrase_pct": 0.28,
+      "exact_pct": 0.20
+    },
+    "quality_score": {
+      "p25": 4.3,
+      "median": 6.1,
+      "p75": 8.2
+    },
+    "devices": {
+      "mobile": 0.63,
+      "desktop": 0.31,
+      "tablet": 0.06
+    }
+  },
+  "pmax": {
+    "overlap_share": 0.23,
+    "delta_roas_vs_search": -0.18,
+    "wasted_spend_overlap": "1300.0"
+  },
+  "conflicts": {
+    "negatives_blocking_converters_count": 7
+  },
+  "geo": {
+    "low_cr_outliers_count": 4,
+    "savings_estimate": "900.0"
+  },
+  "findings": [
+    {
+      "id": "KW_BROAD_SHARE_TOO_HIGH",
+      "category": "keywords",
+      "summary": "Broad match keywords consuming too much spend",
+      "description": "Over 50% of spend going to broad match keywords",
+      "severity": "high",
+      "confidence": 0.95,
+      "entities": [],
+      "dims": {
+        "match_type": "broad",
+        "network": "search"
+      },
+      "metrics": {
+        "broad_spend_share": "0.52",
+        "recommended_max_share": "0.40"
+      },
+      "evidence": [
+        {
+          "source": "google_ads.keywords_report",
+          "query": "SELECT * FROM keywords WHERE match_type = 'BROAD'",
+          "rows": 15000,
+          "sample": [],
+          "checksum": "abc123",
+          "entities": []
+        }
+      ],
+      "provenance": {
+        "name": "match_type_share_analyzer",
+        "version": "1.0.0",
+        "git_sha": "abc123def456",
+        "started_at": "2025-08-24T11:00:00Z",
+        "finished_at": "2025-08-24T11:05:00Z"
+      }
+    }
+  ],
+  "index": {},
+  "data_sources": [
+    {
+      "source": "google_ads.api",
+      "query": null,
+      "rows": 100000,
+      "sample": [],
+      "checksum": "def456",
+      "entities": []
+    }
+  ],
+  "analyzers": [
+    {
+      "name": "match_type_share_analyzer",
+      "version": "1.0.0",
+      "git_sha": "abc123def456",
+      "started_at": "2025-08-24T11:00:00Z",
+      "finished_at": "2025-08-24T11:05:00Z"
+    }
+  ],
+  "completeness": {
+    "tracking_ok": true,
+    "has_pmax_data": true
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-08-24T13:00:00Z",
+  "account": {
+    "account_id": "987-654-3210",
+    "account_name": "E-commerce Plus"
+  },
+  "date_range": {
+    "start_date": "2025-08-01",
+    "end_date": "2025-08-23"
+  },
+  "totals": {
+    "spend": {
+      "amount": "75000.50",
+      "currency": "EUR"
+    },
+    "clicks": 95000,
+    "impressions": 3200000,
+    "conversions": "850.0",
+    "revenue": {
+      "amount": "185000.75",
+      "currency": "EUR"
+    },
+    "spend_usd": "82500.55",
+    "revenue_usd": "203500.83"
+  },
+  "aggregates": {
+    "match_type": {
+      "broad_pct": 0.35,
+      "phrase_pct": 0.40,
+      "exact_pct": 0.25
+    },
+    "quality_score": {
+      "p25": 5.1,
+      "median": 7.2,
+      "p75": 9.0
+    },
+    "devices": {
+      "mobile": 0.58,
+      "desktop": 0.38,
+      "tablet": 0.04
+    }
+  },
+  "pmax": {
+    "overlap_share": 0.15,
+    "delta_roas_vs_search": 0.12,
+    "wasted_spend_overlap": "750.25"
+  },
+  "conflicts": {
+    "negatives_blocking_converters_count": 3
+  },
+  "geo": {
+    "low_cr_outliers_count": 2,
+    "savings_estimate": "450.0"
+  },
+  "findings": [
+    {
+      "id": "QUALITY_SCORE_LOW",
+      "category": "quality",
+      "summary": "Many keywords have low quality scores",
+      "description": "25th percentile quality score is below 6",
+      "severity": "medium",
+      "confidence": 0.88,
+      "entities": [],
+      "dims": {
+        "quality_threshold": 6.0
+      },
+      "metrics": {
+        "p25_quality_score": "5.1",
+        "recommended_min": "6.0"
+      },
+      "evidence": [
+        {
+          "source": "google_ads.keywords_report",
+          "query": "SELECT * FROM keywords WHERE quality_score < 6",
+          "rows": 8500,
+          "sample": [],
+          "checksum": "xyz789",
+          "entities": []
+        }
+      ],
+      "provenance": {
+        "name": "quality_score_analyzer",
+        "version": "1.0.0",
+        "git_sha": "def456ghi789",
+        "started_at": "2025-08-24T12:30:00Z",
+        "finished_at": "2025-08-24T12:35:00Z"
+      }
+    }
+  ],
+  "index": {},
+  "data_sources": [
+    {
+      "source": "google_ads.api",
+      "query": null,
+      "rows": 125000,
+      "sample": [],
+      "checksum": "ghi789",
+      "entities": []
+    }
+  ],
+  "analyzers": [
+    {
+      "name": "quality_score_analyzer",
+      "version": "1.0.0",
+      "git_sha": "def456ghi789",
+      "started_at": "2025-08-24T12:30:00Z",
+      "finished_at": "2025-08-24T12:35:00Z"
+    }
+  ],
+  "completeness": {
+    "tracking_ok": true,
+    "has_pmax_data": false
+  }
+}
