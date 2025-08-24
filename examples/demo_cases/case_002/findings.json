@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-08-23T00:00:00Z",
+  "account": {"account_id": "555-666-7777", "account_name": "Beta Supplies"},
+  "date_range": {"start_date": "2025-07-01", "end_date": "2025-07-31"},
+  "totals": {"spend_usd": "18000.0", "clicks": 29000, "impressions": 820000, "conversions": "410", "revenue_usd": "76000.0"},
+  "aggregates": {
+    "devices": {"mobile": 0.75},
+    "match_type": {"broad_pct": 0.28},
+    "quality_score": {"p25": 6.1}
+  },
+  "pmax": {"overlap_share": 0.12, "delta_roas_vs_search": -0.05},
+  "findings": [],
+  "metrics": {"attribution_recovery_estimate": 0},
+  "completeness": {"tracking_ok": false}
+}
+
