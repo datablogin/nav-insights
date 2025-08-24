@@ -4,8 +4,34 @@ import ast
 from functools import lru_cache
 import yaml
 from jinja2 import Template
-from .dsl import eval_expr, value
+from .dsl import eval_expr, value, register_dsl_function
 from .actions import Action, ActionImpact
+
+
+# Register domain-specific helper functions for use in DSL expressions
+def _register_helpers():
+    """Register common helper functions used in rules."""
+
+    def pct(x):
+        """Format a decimal value as a percentage string."""
+        try:
+            return f"{float(x) * 100:.0f}%"
+        except (TypeError, ValueError):
+            return "n/a"
+
+    def usd(x):
+        """Format a numeric value as USD currency string."""
+        try:
+            return f"${float(x):,.0f}"
+        except (TypeError, ValueError):
+            return "n/a"
+
+    register_dsl_function("pct", pct)
+    register_dsl_function("usd", usd)
+
+
+# Register helpers on module import
+_register_helpers()
 
 
 def _render(template_str: str, ctx: Dict[str, Any]) -> str:
