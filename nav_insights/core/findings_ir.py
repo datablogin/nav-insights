@@ -37,6 +37,9 @@ USD = condecimal(
 Rate01 = condecimal(ge=0, le=1, max_digits=6, decimal_places=5)  # probabilities/ratios in [0,1]
 Pct01 = Rate01  # alias for clarity
 
+# Default currency - configurable via environment variable
+DEFAULT_CURRENCY = os.getenv("NAV_INSIGHTS_DEFAULT_CURRENCY", "USD")
+
 
 # ---------- Money with currency semantics ----------
 class Money(BaseModel):
@@ -44,9 +47,7 @@ class Money(BaseModel):
 
     amount: condecimal(max_digits=18, decimal_places=4) = Decimal("0")
     currency: str = Field(
-        default_factory=lambda: os.getenv("NAV_INSIGHTS_DEFAULT_CURRENCY", "USD"),
-        pattern=r"^[A-Z]{3}$",
-        description="3-letter ISO currency code",
+        default=DEFAULT_CURRENCY, pattern=r"^[A-Z]{3}$", description="3-letter ISO currency code"
     )
 
     @model_validator(mode="after")
@@ -54,6 +55,8 @@ class Money(BaseModel):
         if self.amount < 0:
             raise ValueError("Money amount cannot be negative")
         return self
+
+
 
 
 # ---------- Dimensions / entity references ----------
