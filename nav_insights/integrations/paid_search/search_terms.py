@@ -75,7 +75,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     findings: List[Finding] = []
 
     # Wasteful search terms
-    for item in (inp.detailed_findings.get("wasteful_search_terms") or []):
+    for item in inp.detailed_findings.get("wasteful_search_terms") or []:
         term = str(item.get("term", ""))
         kw = item.get("keyword_triggered")
         summary = f"Wasteful search term '{term}' — add negative"
@@ -104,7 +104,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         )
 
     # Negative keyword suggestions
-    for item in (inp.detailed_findings.get("negative_keyword_suggestions") or []):
+    for item in inp.detailed_findings.get("negative_keyword_suggestions") or []:
         neg = str(item.get("negative_keyword", ""))
         summary = f"Negative keyword suggestion '{neg}'"
         severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
