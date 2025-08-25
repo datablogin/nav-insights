@@ -11,7 +11,7 @@ Each agent should work in their designated worktree directory to avoid conflicts
 | **Main Agent** | `/nav_insights-main/` | `main` | Production releases, merges |
 | **Immediate Steps Agent** | `/nav_insights-immediate-steps/` | `feat/immediate-steps` | Quick tasks |
 | **Parser Agent** | `/nav_insights/` | `feat/paid-search-parsers` | Parsing functionality |
-| **Available** | - | - | Ready for next issue assignment |
+| **Issue #39 Agent** | `/nav_insights-issue-39/` | `feat/issue-39` | Negative conflicts analyzer → IR mapping |
 | **DSL Hardening Agent** | `/nav_insights-dsl-hardening/` | `feat/dsl-hardening` | Core DSL hardening |
 
 ### Agent Commands
