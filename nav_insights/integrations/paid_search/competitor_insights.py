@@ -63,7 +63,11 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         )
 
     evidence = Evidence(source="paid_search_nav.competitor_insights")
-    prov = AnalyzerProvenance(name=inp.analyzer, finished_at=datetime.fromisoformat(inp.timestamp))
+    prov = AnalyzerProvenance(
+        name=inp.analyzer,
+        version="unknown",
+        finished_at=datetime.fromisoformat(inp.timestamp),
+    )
 
     af = AuditFindings(
         account=account,
