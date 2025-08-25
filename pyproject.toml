@@ -40,6 +40,11 @@ quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
 
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = ["E501"]
 "examples/**.py" = ["E501"]

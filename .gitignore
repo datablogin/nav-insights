@@ -60,6 +60,9 @@ models/
 *.db
 *.sqlite
 
+# Generated schemas (run scripts/export_schemas.py to regenerate)
+docs/schemas/
+
 # Logs
 *.log
 logs/
