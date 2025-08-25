@@ -39,7 +39,7 @@ git push origin [branch-name]
 - ✅ **Issue #5**: COMPLETED - Merged/closed (worktree cleaned up)  
 - ✅ **Immediate Steps**: Latest commit `23463ff` - Ruff formatting applied
 - ✅ **Main**: Latest commit `1ad1bfb` - Base repository state
-- 🔄 **Parsers**: Latest commit `3cfe54f` - Current work in main directory
+- 🔄 **Parsers**: Latest commit `4e7ae0a` - Current work in main directory; PR #52 open
 
 ### When to Create New Worktrees
 

@@ -1,5 +1,3 @@
-import json
-from pathlib import Path
 from nav_insights.integrations.paid_search.competitor_insights import parse_competitor_insights
 from nav_insights.integrations.paid_search.keyword_analyzer import parse_keyword_analyzer
 from nav_insights.integrations.paid_search.search_terms import parse_search_terms
@@ -15,7 +13,13 @@ def test_competitor_insights_smoke():
         "summary": {"priority_level": "MEDIUM"},
         "detailed_findings": {
             "primary_competitors": [
-                {"competitor": "Cracker Barrel", "impression_share_overlap": 0.34, "shared_keywords": 89, "cost_competition_level": "HIGH", "competitive_threat_level": "HIGH"}
+                {
+                    "competitor": "Cracker Barrel",
+                    "impression_share_overlap": 0.34,
+                    "shared_keywords": 89,
+                    "cost_competition_level": "HIGH",
+                    "competitive_threat_level": "HIGH",
+                }
             ]
         },
     }
@@ -33,10 +37,26 @@ def test_keyword_analyzer_smoke():
         "summary": {"priority_level": "CRITICAL"},
         "detailed_findings": {
             "underperforming_keywords": [
-                {"name": "food delivery", "match_type": "BROAD", "cost": 892.45, "conversions": 0, "cpa": "N/A", "campaign": "Generic", "recommendation": "Pause"}
+                {
+                    "name": "food delivery",
+                    "match_type": "BROAD",
+                    "cost": 892.45,
+                    "conversions": 0,
+                    "cpa": "N/A",
+                    "campaign": "Generic",
+                    "recommendation": "Pause",
+                }
             ],
             "top_performers": [
-                {"name": "brand term", "match_type": "EXACT", "cost": 234.56, "conversions": 18, "cpa": 13.03, "campaign": "Brand", "recommendation": "Increase bid"}
+                {
+                    "name": "brand term",
+                    "match_type": "EXACT",
+                    "cost": 234.56,
+                    "conversions": 18,
+                    "cpa": 13.03,
+                    "campaign": "Brand",
+                    "recommendation": "Increase bid",
+                }
             ],
         },
     }
@@ -53,14 +73,25 @@ def test_search_terms_smoke():
         "summary": {"priority_level": "HIGH"},
         "detailed_findings": {
             "wasteful_search_terms": [
-                {"term": "jobs", "cost": 100.0, "conversions": 0, "clicks": 10, "keyword_triggered": "brand", "recommendation": "Add negative"}
+                {
+                    "term": "jobs",
+                    "cost": 100.0,
+                    "conversions": 0,
+                    "clicks": 10,
+                    "keyword_triggered": "brand",
+                    "recommendation": "Add negative",
+                }
             ],
             "negative_keyword_suggestions": [
-                {"negative_keyword": "free", "match_type": "BROAD", "estimated_savings": 500.0, "reason": "free meal searches"}
+                {
+                    "negative_keyword": "free",
+                    "match_type": "BROAD",
+                    "estimated_savings": 500.0,
+                    "reason": "free meal searches",
+                }
             ],
         },
     }
     af = parse_search_terms(sample)
     assert isinstance(af, AuditFindings)
     assert len(af.findings) == 2
-
