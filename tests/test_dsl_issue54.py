@@ -3,8 +3,15 @@
 Extended with short-circuit and None-semantics tests (Issue #54).
 """
 
+import importlib
+
 import pytest
+
+import nav_insights.core.dsl as dsl_mod
 from nav_insights.core.dsl import eval_expr
+
+# Ensure we reload DSL module from this worktree to avoid stale imports in combined test runs
+importlib.reload(dsl_mod)
 
 
 class TestShortCircuitAndNoneSemantics:
@@ -66,4 +73,3 @@ class TestResourceLimitsAndErrors:
     def test_builtin_funcs_ok(self):
         assert eval_expr("min(10, 5, 20)", {}) == 5
         assert eval_expr("max(10, 5, 20)", {}) == 20
-
