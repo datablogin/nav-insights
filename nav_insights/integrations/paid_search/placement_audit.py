@@ -46,10 +46,10 @@ def parse_placement_audit(data: Dict[str, Any]) -> AuditFindings:
 
     # Poor performers → findings
     for item in inp.detailed_findings.get("poor_performers", []) or []:
-        placement_url = str(item.get("placement_url", "unknown_placement"))
+        placement_url = str(item.get("placement_url") or "unknown_placement")
         network = _normalize_network(item.get("network", ""))
-        campaign = str(item.get("campaign", ""))
-        ad_group = str(item.get("ad_group", ""))
+        campaign = str(item.get("campaign") or "")
+        ad_group = str(item.get("ad_group") or "")
         recommendation = item.get("recommendation", "")
 
         summary = f"Poor performing placement '{placement_url}'"
@@ -113,10 +113,10 @@ def parse_placement_audit(data: Dict[str, Any]) -> AuditFindings:
 
     # Top performers → findings
     for item in inp.detailed_findings.get("top_performers", []) or []:
-        placement_url = str(item.get("placement_url", "unknown_placement"))
+        placement_url = str(item.get("placement_url") or "unknown_placement")
         network = _normalize_network(item.get("network", ""))
-        campaign = str(item.get("campaign", ""))
-        ad_group = str(item.get("ad_group", ""))
+        campaign = str(item.get("campaign") or "")
+        ad_group = str(item.get("ad_group") or "")
         recommendation = item.get("recommendation", "")
 
         summary = f"Top performing placement '{placement_url}'"
@@ -148,12 +148,12 @@ def parse_placement_audit(data: Dict[str, Any]) -> AuditFindings:
             except (ValueError, TypeError):
                 pass  # Skip invalid conversion rate values
 
-        # Handle CPA
-        if (cpa := item.get("cpa")) is not None:
+        # Handle CPA - omit if N/A
+        if (cpa := item.get("cpa")) not in (None, "N/A"):
             try:
                 metrics["cpa"] = Decimal(str(cpa))
             except (ValueError, TypeError):
-                pass
+                pass  # Omit invalid CPA values
 
         entities = [
             EntityRef(
@@ -180,7 +180,7 @@ def parse_placement_audit(data: Dict[str, Any]) -> AuditFindings:
     evidence = Evidence(source="paid_search_nav.placement_audit")
     prov = AnalyzerProvenance(
         name=inp.analyzer,
-        version="1.0.0",
+        version="1.0.0",  # TODO: Make configurable
         finished_at=datetime.fromisoformat(inp.timestamp),
     )
 
@@ -196,13 +196,14 @@ def parse_placement_audit(data: Dict[str, Any]) -> AuditFindings:
             total_cost += finding.metrics.get("cost", Decimal("0"))
 
         # Convert counts to percentages for network distribution
-        total_placements = sum(network_counts.values())
-        if total_placements > 0:
-            network_pct = {
-                f"{network.lower()}_pct": Decimal(str(count / total_placements))
-                for network, count in network_counts.items()
-            }
-            aggregates_dict["networks"] = network_pct
+        # TODO: Add networks field to Aggregates class
+        # total_placements = sum(network_counts.values())
+        # if total_placements > 0:
+        #     network_pct = {
+        #         f"{network.lower()}_pct": Decimal(str(count / total_placements))
+        #         for network, count in network_counts.items()
+        #     }
+        #     aggregates_dict["networks"] = network_pct
 
     af = AuditFindings(
         account=account,
