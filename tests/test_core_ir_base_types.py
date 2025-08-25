@@ -12,6 +12,7 @@ Tests cover:
 
 import json
 import time
+import os
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -26,7 +27,6 @@ from nav_insights.core.ir_base import (
     AuditFindings,
     get_model_json_schema,
     export_all_schemas,
-    DEFAULT_CURRENCY,
 )
 from nav_insights.domains.paid_search.ir import AuditFindingsSearch
 from nav_insights.domains.paid_social.ir import AuditFindingsSocial
@@ -37,9 +37,9 @@ class TestCoreIRTypes:
 
     def test_money_type_with_currency(self):
         """Test Money type stores amount as Decimal with currency code"""
-        # Test default currency
+        # Test default currency (now reads from env at instance creation)
         money = Money(amount=Decimal("1000.50"))
-        assert money.currency == DEFAULT_CURRENCY
+        assert money.currency == os.getenv("NAV_INSIGHTS_DEFAULT_CURRENCY", "USD")
         assert isinstance(money.amount, Decimal)
         assert money.amount == Decimal("1000.50")
 
@@ -226,9 +226,14 @@ class TestPerformance:
         print(f"\nValidation performance: {avg_time_ms:.3f}ms average over {iterations} iterations")
         print(f"Min: {min(validation_times):.3f}ms, Max: {max(validation_times):.3f}ms")
 
-        # Performance requirement: < 5ms average
-        assert avg_time_ms < 5.0, (
-            f"Average validation time {avg_time_ms:.3f}ms exceeds 5ms requirement"
+        # Performance requirement: < 5ms average (local) or < 10ms (CI)
+        # Add headroom for CI environment noise as recommended by ChatGPT
+        is_ci = os.getenv("CI", "").lower() in ("true", "1")
+        threshold_ms = 10.0 if is_ci else 5.0
+        env_label = "CI" if is_ci else "local"
+        
+        assert avg_time_ms < threshold_ms, (
+            f"Average validation time {avg_time_ms:.3f}ms exceeds {threshold_ms}ms requirement ({env_label})"
         )
 
 
