@@ -341,26 +341,30 @@ class TestRegisteredHelpers:
     def setup_method(self):
         # Ensure helpers are registered for each test
         from nav_insights.core.dsl import get_registry
-        
+
         registry = get_registry()
-        
+
         # Check if helpers are already registered, if not register them
         if not registry.get_function("pct"):
+
             def pct(x):
                 """Format a decimal value as a percentage string."""
                 try:
                     return f"{float(x) * 100:.0f}%"
                 except (TypeError, ValueError):
                     return "n/a"
+
             registry.register_function("pct", pct)
-        
+
         if not registry.get_function("usd"):
+
             def usd(x):
                 """Format a numeric value as USD currency string."""
                 try:
                     return f"${float(x):,.0f}"
                 except (TypeError, ValueError):
                     return "n/a"
+
             registry.register_function("usd", usd)
 
     def test_pct_helper_function(self):
