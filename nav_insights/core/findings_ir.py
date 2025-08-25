@@ -20,7 +20,6 @@ Environment Variables:
 
 Pydantic v2 compatible with v1 fallback for JSON schema export.
 """
-
 from __future__ import annotations
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -40,14 +39,15 @@ Pct01 = Rate01  # alias for clarity
 # Default currency - configurable via environment variable
 DEFAULT_CURRENCY = os.getenv("NAV_INSIGHTS_DEFAULT_CURRENCY", "USD")
 
-
 # ---------- Money with currency semantics ----------
 class Money(BaseModel):
     """Money type with amount and currency code, preserving Decimal precision"""
 
     amount: condecimal(max_digits=18, decimal_places=4) = Decimal("0")
     currency: str = Field(
-        default=DEFAULT_CURRENCY, pattern=r"^[A-Z]{3}$", description="3-letter ISO currency code"
+        default=DEFAULT_CURRENCY,
+        pattern=r"^[A-Z]{3}$",
+        description="3-letter ISO currency code",
     )
 
     @model_validator(mode="after")
