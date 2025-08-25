@@ -20,6 +20,7 @@ Environment Variables:
 
 Pydantic v2 compatible with v1 fallback for JSON schema export.
 """
+
 from __future__ import annotations
 from datetime import date, datetime, timezone
 from decimal import Decimal
