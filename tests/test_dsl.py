@@ -340,7 +340,7 @@ class TestRegisteredHelpers:
 
     def setup_method(self):
         # Import rules module to ensure helpers are registered
-        pass
+        from nav_insights.core import rules  # noqa: F401
 
     def test_pct_helper_function(self):
         result = eval_expr("pct(0.52)", {})
@@ -488,7 +488,7 @@ class TestErrorTaxonomy:
             eval_expr(long_expr, {}, max_length=100)
 
         # Test AST depth limit
-        deep_expr = "(" * 30 + "1" + ")" * 30  # Very deep nesting
+        deep_expr = "1" + " + 1" * 15  # Deep binary operations
         with pytest.raises(ResourceLimitError, match="AST depth exceeds limit"):
             eval_expr(deep_expr, {}, max_depth=10)
 
@@ -557,7 +557,7 @@ class TestResourceLimits:
         shallow_expr = "1 + 2 + 3"
         assert eval_expr(shallow_expr, {}, max_depth=5) == 6
 
-        deep_expr = "(" * 20 + "1" + ")" * 20
+        deep_expr = "1" + " + 1" * 15  # Deep binary operations
         with pytest.raises(ResourceLimitError):
             eval_expr(deep_expr, {}, max_depth=10)
 
