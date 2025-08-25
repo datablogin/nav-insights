@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-08-24T15:00:00Z",
+  "account": {
+    "account_id": "IG-987-654-321",
+    "account_name": "Instagram Influencer Campaign"
+  },
+  "date_range": {
+    "start_date": "2025-08-01",
+    "end_date": "2025-08-20"
+  },
+  "totals": {
+    "spend": {
+      "amount": "18500.75",
+      "currency": "GBP"
+    },
+    "clicks": 32000,
+    "impressions": 980000,
+    "conversions": "420.0",
+    "revenue": {
+      "amount": "62000.25",
+      "currency": "GBP"
+    },
+    "spend_usd": "23125.94",
+    "revenue_usd": "77500.31"
+  },
+  "aggregates": {
+    "match_type": {},
+    "quality_score": {},
+    "devices": {
+      "mobile": 0.95,
+      "desktop": 0.05,
+      "tablet": 0.00
+    }
+  },
+  "pmax": {},
+  "conflicts": {},
+  "geo": {
+    "top_performing_regions_count": 3,
+    "underperforming_regions_count": 2
+  },
+  "findings": [
+    {
+      "id": "AUDIENCE_OVERLAP_HIGH",
+      "category": "audience",
+      "summary": "High audience overlap between campaigns",
+      "description": "Multiple campaigns targeting similar audiences causing bid competition",
+      "severity": "high",
+      "confidence": 0.91,
+      "entities": [
+        {
+          "type": "campaign",
+          "id": "campaign_456",
+          "name": "Influencer Partnership Q3",
+          "extra": {
+            "objective": "reach"
+          }
+        },
+        {
+          "type": "campaign",
+          "id": "campaign_789",
+          "name": "Brand Awareness Push",
+          "extra": {
+            "objective": "brand_awareness"
+          }
+        }
+      ],
+      "dims": {
+        "platform": "instagram",
+        "placement": "stories"
+      },
+      "metrics": {
+        "overlap_percentage": "0.65",
+        "cost_increase": "1250.50"
+      },
+      "evidence": [
+        {
+          "source": "instagram_ads.audience_insights",
+          "query": "audience overlap analysis",
+          "rows": 1200,
+          "sample": [],
+          "checksum": "ig456",
+          "entities": []
+        }
+      ],
+      "provenance": {
+        "name": "audience_overlap_analyzer",
+        "version": "1.0.0",
+        "git_sha": "ig789abc123",
+        "started_at": "2025-08-24T14:30:00Z",
+        "finished_at": "2025-08-24T14:40:00Z"
+      }
+    }
+  ],
+  "index": {},
+  "data_sources": [
+    {
+      "source": "instagram_ads.api",
+      "query": null,
+      "rows": 18000,
+      "sample": [],
+      "checksum": "ig123",
+      "entities": []
+    }
+  ],
+  "analyzers": [
+    {
+      "name": "audience_overlap_analyzer",
+      "version": "1.0.0",
+      "git_sha": "ig789abc123",
+      "started_at": "2025-08-24T14:30:00Z",
+      "finished_at": "2025-08-24T14:40:00Z"
+    }
+  ],
+  "completeness": {
+    "tracking_ok": true,
+    "has_audience_data": true
+  }
+}
