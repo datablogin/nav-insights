@@ -113,6 +113,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
             )
         )
 
+<<<<<<< HEAD
     # Keyword gaps → one finding per gap
     for gap in inp.detailed_findings.get("keyword_gaps", []) or []:
         keyword = str(gap.get("keyword", "unknown"))
