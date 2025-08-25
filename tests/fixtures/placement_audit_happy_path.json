@@ -1,0 +1,84 @@
+{
+  "analyzer": "placement_audit",
+  "customer_id": "123-456-7890",
+  "analysis_period": {
+    "start_date": "2025-07-01T00:00:00Z",
+    "end_date": "2025-07-31T23:59:59Z"
+  },
+  "timestamp": "2025-08-24T15:30:00Z",
+  "summary": {
+    "total_placements_analyzed": 150,
+    "poor_performing_placements": 12,
+    "recommendations_count": 18,
+    "potential_monthly_savings": 3250.75,
+    "priority_level": "HIGH"
+  },
+  "detailed_findings": {
+    "poor_performers": [
+      {
+        "placement_url": "example.com",
+        "network": "Display",
+        "cost": 245.67,
+        "conversions": 0,
+        "clicks": 123,
+        "impressions": 45678,
+        "ctr": 0.27,
+        "conversion_rate": 0.0,
+        "cpa": "N/A",
+        "campaign": "Display Campaign",
+        "ad_group": "General Display",
+        "recommendation": "Exclude placement - High cost with zero conversions"
+      },
+      {
+        "placement_url": "mobile-game-ads.net",
+        "network": "Apps",
+        "cost": 892.12,
+        "conversions": 2,
+        "clicks": 456,
+        "impressions": 78900,
+        "ctr": 0.58,
+        "conversion_rate": 0.44,
+        "cpa": 446.06,
+        "campaign": "Mobile App Campaign",
+        "ad_group": "Gaming Apps",
+        "recommendation": "Poor CPA performance - Consider bid reduction or exclusion"
+      }
+    ],
+    "top_performers": [
+      {
+        "placement_url": "youtube.com",
+        "network": "YouTube",
+        "cost": 1234.50,
+        "conversions": 45,
+        "clicks": 2340,
+        "impressions": 156789,
+        "ctr": 1.49,
+        "conversion_rate": 1.92,
+        "cpa": 27.43,
+        "campaign": "Video Campaign",
+        "ad_group": "YouTube Targeting",
+        "recommendation": "Excellent performance - Consider increasing bids or budget"
+      },
+      {
+        "placement_url": "news-website.com",
+        "network": "Display",
+        "cost": 567.89,
+        "conversions": 23,
+        "clicks": 1789,
+        "impressions": 89456,
+        "ctr": 2.00,
+        "conversion_rate": 1.29,
+        "cpa": 24.69,
+        "campaign": "Display Campaign",
+        "ad_group": "News Sites",
+        "recommendation": "Strong performer - Maintain current strategy"
+      }
+    ],
+    "recommendations": [
+      "Exclude 12 poor performing placements to save estimated $3,250/month",
+      "Increase bids on top 5 performing placements by 15%",
+      "Consider placement-level bid adjustments for moderate performers",
+      "Review mobile app placements - higher CPA but good engagement"
+    ]
+  }
+}
