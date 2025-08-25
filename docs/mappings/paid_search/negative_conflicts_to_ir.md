@@ -153,11 +153,13 @@ The `negative_conflicts.py` analyzer identifies situations where:
 {
   "totals": {
     "spend_usd": "0",  // Not applicable for this analyzer
-    "revenue_usd": "-2400.00",  // Negative impact on revenue
-    "conversions": "-12"  // Lost conversions
+    "revenue_usd": "170000.0",  // Total account revenue (positive)
+    "conversions": "850.0"  // Total account conversions
   }
 }
 ```
+
+Note: Totals represent overall account performance. Individual finding metrics use positive values to represent lost opportunity amounts.
 
 ## Conflicts Namespace
 ```json
@@ -188,6 +190,34 @@ The `negative_conflicts.py` analyzer identifies situations where:
 - Core IR base types (Issue #3) ✅ 
 - Epic #12 (analyzer integration)
 - PaidSearchNav analyzer outputs
+
+## Entity Structure Guidelines
+
+### Entity `extra` vs `dims` Usage
+- **Entity `extra`**: Use for entity-specific metadata that describes the entity itself
+  - Example: `{"match_type": "BROAD"}` for a keyword entity
+  - Purpose: Provides context about the entity that may not be captured in standard fields
+- **Finding `dims`**: Use for finding-level dimensions that categorize the finding
+  - Example: `{"match_type": "BROAD", "conflict_type": "blocking"}`
+  - Purpose: Enables filtering and grouping of findings by analytical dimensions
+
+### Revenue Sign Convention
+- **Positive values** in `revenue_lost_usd` and similar metrics represent lost opportunity
+- **Negative values** in totals represent actual negative impact on account performance
+- This distinction allows for clear separation between individual finding impacts and aggregate account-level effects
+
+### Confidence Score Calculation
+Confidence scores (0.0-1.0) are calculated based on:
+- **Data volume**: Higher volume = higher confidence
+- **Statistical significance**: Conversion rates and sample sizes
+- **Temporal stability**: Consistent patterns over time
+- **Account context**: Mature accounts vs new accounts
+
+Typical ranges:
+- `0.9+`: High-volume, statistically significant conflicts
+- `0.7-0.9`: Moderate volume with clear patterns
+- `0.5-0.7`: Lower volume but consistent impact
+- `<0.5`: Minimal data, uncertain assessment (edge cases)
 
 ## Notes
 - Consider conflict severity based on revenue impact thresholds

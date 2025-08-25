@@ -85,9 +85,9 @@
         "conflict_type": "blocking"
       },
       "metrics": {
-        "conversions_lost": "12.0",
-        "revenue_lost_usd": "2400.0",
-        "clicks_blocked": "45.0"
+        "conversions_lost": 12.0,
+        "revenue_lost_usd": 2400.0,
+        "clicks_blocked": 45.0
       },
       "evidence": [
         {
@@ -145,9 +145,9 @@
         "conflict_type": "blocking"
       },
       "metrics": {
-        "conversions_lost": "8.0",
-        "revenue_lost_usd": "1600.0", 
-        "clicks_blocked": "32.0"
+        "conversions_lost": 8.0,
+        "revenue_lost_usd": 1600.0,
+        "clicks_blocked": 32.0
       },
       "evidence": [
         {
@@ -195,8 +195,8 @@
         "conflict_type": "overly_broad"
       },
       "metrics": {
-        "affected_terms_count": "15.0",
-        "total_revenue_impact_usd": "1800.0"
+        "affected_terms_count": 15.0,
+        "total_revenue_impact_usd": 1800.0
       },
       "evidence": [
         {

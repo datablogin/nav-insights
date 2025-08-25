@@ -7,6 +7,8 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+
 from nav_insights.core.ir_base import AuditFindings, FindingCategory, Severity
 
 
@@ -54,8 +56,8 @@ class TestNegativeConflictsMapping:
         assert ir.account.account_name == "Small Test Account"
 
         # Edge case specific validations
-        assert len(ir.findings) == 1
-        assert ir.findings[0].severity == Severity.low
+        assert len(ir.findings) == 2
+        assert all(f.severity == Severity.low for f in ir.findings)
         assert ir.completeness.get("low_volume_account") is True
 
     def test_findings_structure_happy_path(self):
@@ -248,14 +250,17 @@ class TestNegativeConflictsMapping:
         ir = AuditFindings.model_validate(fixture_data)
 
         # Should handle minimal data gracefully
-        assert len(ir.findings) == 1
-        assert ir.findings[0].severity == Severity.low
+        assert len(ir.findings) == 2
+        assert all(f.severity == Severity.low for f in ir.findings)
 
         # Low confidence for minimal data
-        assert ir.findings[0].confidence < 0.5
+        assert all(f.confidence < 0.5 for f in ir.findings)
 
-        # Minimal revenue impact
-        assert ir.findings[0].metrics["total_revenue_impact_usd"] == Decimal("5.0")
+        # Find the broad finding (overly broad type)
+        broad_finding = next(
+            f for f in ir.findings if f.dims.get("conflict_type") == "overly_broad"
+        )
+        assert broad_finding.metrics["total_revenue_impact_usd"] == Decimal("5.0")
 
         # Completeness flags should indicate data limitations
         assert ir.completeness.get("has_conversion_data") is False
@@ -283,3 +288,122 @@ class TestNegativeConflictsMapping:
         assert ir.account.account_id == ir_roundtrip.account.account_id
         assert len(ir.findings) == len(ir_roundtrip.findings)
         assert ir.conflicts["revenue_impact_usd"] == ir_roundtrip.conflicts["revenue_impact_usd"]
+
+    def test_invalid_date_range_validation(self):
+        """Test validation fails for malformed dates and invalid date ranges."""
+        fixture_path = (
+            Path(__file__).parent / "fixtures" / "negative_conflicts_fixture_happy_path.json"
+        )
+
+        with open(fixture_path, "r", encoding="utf-8") as f:
+            fixture_data = json.load(f)
+
+        # Test invalid date format
+        invalid_data = fixture_data.copy()
+        invalid_data["date_range"]["start_date"] = "invalid-date"
+
+        with pytest.raises(Exception):  # Pydantic validation error
+            AuditFindings.model_validate(invalid_data)
+
+        # Test end_date before start_date
+        invalid_data = fixture_data.copy()
+        invalid_data["date_range"]["start_date"] = "2025-08-31"
+        invalid_data["date_range"]["end_date"] = "2025-08-01"
+
+        with pytest.raises(Exception):  # Validation error
+            AuditFindings.model_validate(invalid_data)
+
+    def test_negative_revenue_validation(self):
+        """Test validation handles negative revenue values appropriately."""
+        fixture_path = (
+            Path(__file__).parent / "fixtures" / "negative_conflicts_fixture_happy_path.json"
+        )
+
+        with open(fixture_path, "r", encoding="utf-8") as f:
+            fixture_data = json.load(f)
+
+        # Test negative total revenue (should fail validation due to Money constraints)
+        fixture_data["totals"]["revenue"]["amount"] = "-1000.0"
+
+        # Should fail validation - Money type doesn't allow negative amounts
+        with pytest.raises(Exception):  # ValidationError for negative Money
+            AuditFindings.model_validate(fixture_data)
+
+    def test_missing_required_fields(self):
+        """Test validation fails when required fields are missing."""
+        fixture_path = (
+            Path(__file__).parent / "fixtures" / "negative_conflicts_fixture_happy_path.json"
+        )
+
+        with open(fixture_path, "r", encoding="utf-8") as f:
+            fixture_data = json.load(f)
+
+        # Test missing account_id (required field)
+        invalid_data = fixture_data.copy()
+        del invalid_data["account"]["account_id"]
+
+        with pytest.raises(Exception):
+            AuditFindings.model_validate(invalid_data)
+
+        # Test missing date_range (required field)
+        invalid_data = fixture_data.copy()
+        del invalid_data["date_range"]
+
+        with pytest.raises(Exception):
+            AuditFindings.model_validate(invalid_data)
+
+    def test_boundary_values(self):
+        """Test boundary values (zero, extremely large numbers)."""
+        fixture_path = (
+            Path(__file__).parent / "fixtures" / "negative_conflicts_fixture_happy_path.json"
+        )
+
+        with open(fixture_path, "r", encoding="utf-8") as f:
+            fixture_data = json.load(f)
+
+        # Test zero values
+        zero_data = fixture_data.copy()
+        zero_data["totals"]["spend"]["amount"] = "0.0"
+        zero_data["totals"]["revenue"]["amount"] = "0.0"
+        zero_data["totals"]["conversions"] = "0.0"
+        zero_data["conflicts"]["revenue_impact_usd"] = "0.0"
+
+        ir = AuditFindings.model_validate(zero_data)
+        assert ir.totals.spend.amount == Decimal("0.0")
+        assert ir.totals.revenue.amount == Decimal("0.0")
+        assert ir.conflicts["revenue_impact_usd"] == Decimal("0.0")
+
+        # Test extremely large numbers (but within reasonable business bounds)
+        large_data = fixture_data.copy()
+        large_data["totals"]["spend"]["amount"] = "999999999.99"
+        large_data["totals"]["revenue"]["amount"] = "999999999.99"
+        large_data["conflicts"]["revenue_impact_usd"] = "999999999.99"
+
+        ir = AuditFindings.model_validate(large_data)
+        assert ir.totals.spend.amount == Decimal("999999999.99")
+        assert ir.totals.revenue.amount == Decimal("999999999.99")
+        assert ir.conflicts["revenue_impact_usd"] == Decimal("999999999.99")
+
+    def test_confidence_score_boundaries(self):
+        """Test confidence score boundaries (0.0 to 1.0)."""
+        fixture_path = (
+            Path(__file__).parent / "fixtures" / "negative_conflicts_fixture_happy_path.json"
+        )
+
+        with open(fixture_path, "r", encoding="utf-8") as f:
+            fixture_data = json.load(f)
+
+        # Test minimum confidence (0.0)
+        fixture_data["findings"][0]["confidence"] = 0.0
+        ir = AuditFindings.model_validate(fixture_data)
+        assert ir.findings[0].confidence == 0.0
+
+        # Test maximum confidence (1.0)
+        fixture_data["findings"][0]["confidence"] = 1.0
+        ir = AuditFindings.model_validate(fixture_data)
+        assert ir.findings[0].confidence == 1.0
+
+        # Test invalid confidence (should fail)
+        fixture_data["findings"][0]["confidence"] = 1.5
+        with pytest.raises(Exception):  # Should fail validation
+            AuditFindings.model_validate(fixture_data)

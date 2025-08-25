@@ -43,9 +43,9 @@
   },
   "pmax": {},
   "conflicts": {
-    "negatives_blocking_converters_count": 0,
-    "blocked_conversions_total": 0,
-    "revenue_impact_usd": "0.0",
+    "negatives_blocking_converters_count": 1,
+    "blocked_conversions_total": 0.5,
+    "revenue_impact_usd": "5.0",
     "overly_broad_negatives_count": 1
   },
   "geo": {},
@@ -75,8 +75,8 @@
         "conflict_type": "overly_broad"
       },
       "metrics": {
-        "affected_terms_count": "1.0",
-        "total_revenue_impact_usd": "5.0"
+        "affected_terms_count": 1.0,
+        "total_revenue_impact_usd": 5.0
       },
       "evidence": [
         {
@@ -105,14 +105,69 @@
         "started_at": "2025-08-25T09:45:00Z",
         "finished_at": "2025-08-25T09:45:15Z"
       }
+    },
+    {
+      "id": "NEG_CONFLICT_BLOCK_001",
+      "category": "conflicts",
+      "summary": "Negative keyword 'bad' blocking converting term with minimal impact",
+      "description": "The exact negative keyword 'bad' is blocking a search term but with minimal conversion impact (0.5 conversions). Low data volume makes assessment uncertain.",
+      "severity": "low",
+      "confidence": 0.3,
+      "entities": [
+        {
+          "type": "keyword",
+          "id": "neg:bad",
+          "name": "bad",
+          "extra": {"match_type": "EXACT"}
+        },
+        {
+          "type": "search_term",
+          "id": "st:not bad shoes",
+          "name": "not bad shoes"
+        },
+        {
+          "type": "campaign",
+          "id": "camp:Test Campaign",
+          "name": "Test Campaign"
+        }
+      ],
+      "dims": {
+        "match_type": "EXACT",
+        "conflict_type": "blocking"
+      },
+      "metrics": {
+        "conversions_lost": 0.5,
+        "revenue_lost_usd": 0.0,
+        "clicks_blocked": 2.0
+      },
+      "evidence": [
+        {
+          "source": "paid_search_nav.negative_conflicts",
+          "query": "negative_keyword='bad' AND blocked_terms AND low_volume",
+          "rows": 1,
+          "entities": [
+            {
+              "type": "campaign",
+              "id": "camp:Test Campaign",
+              "name": "Test Campaign"
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "name": "negative_conflicts",
+        "version": "1.0.0",
+        "started_at": "2025-08-25T09:45:00Z",
+        "finished_at": "2025-08-25T09:45:15Z"
+      }
     }
   ],
   "index": {
     "findings_by_category": {
-      "conflicts": 1
+      "conflicts": 2
     },
     "findings_by_severity": {
-      "low": 1
+      "low": 2
     },
     "empty_categories": [
       "keywords",
