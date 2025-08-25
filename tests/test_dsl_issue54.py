@@ -36,3 +36,34 @@ class TestShortCircuitAndNoneSemantics:
         assert eval_expr("None or True", {}) is True
         assert eval_expr("not None", {}) is True
 
+
+class TestResourceLimitsAndErrors:
+    def test_expression_length_limit(self):
+        long_expr = "1+" * 2000  # length > 1024
+        with pytest.raises(Exception) as exc:
+            eval_expr(long_expr, {})
+        assert "Expression length" in str(exc.value)
+
+    def test_ast_depth_limit(self):
+        # Build a deeply nested unary expression: not(not(...not True))
+        depth = 40
+        expr = "not (" * depth + "True" + ")" * depth
+        with pytest.raises(Exception) as exc:
+            eval_expr(expr, {}, max_depth=25)
+        assert "AST depth" in str(exc.value)
+
+    def test_helper_not_found(self):
+        with pytest.raises(Exception) as exc:
+            eval_expr("unknown_func(1)", {})
+        assert "not found" in str(exc.value)
+
+    def test_unsupported_node(self):
+        # Attribute access should be rejected
+        with pytest.raises(Exception) as exc:
+            eval_expr("value.__class__", {})
+        assert "Node not allowed" in str(exc.value)
+
+    def test_builtin_funcs_ok(self):
+        assert eval_expr("min(10, 5, 20)", {}) == 5
+        assert eval_expr("max(10, 5, 20)", {}) == 20
+
