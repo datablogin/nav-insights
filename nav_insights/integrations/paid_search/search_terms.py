@@ -90,7 +90,11 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         )
 
     evidence = Evidence(source="paid_search_nav.search_terms")
-    prov = AnalyzerProvenance(name=inp.analyzer or "SearchTermsAnalyzer", finished_at=datetime.fromisoformat(timestamp))
+    prov = AnalyzerProvenance(
+        name=inp.analyzer or "SearchTermsAnalyzer",
+        version="unknown",
+        finished_at=datetime.fromisoformat(timestamp),
+    )
 
     af = AuditFindings(
         account=account,
