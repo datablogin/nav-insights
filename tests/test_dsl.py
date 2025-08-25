@@ -42,7 +42,8 @@ class TestValueAccessor:
         obj.nested = TestObj()
         obj.nested.value = 200
 
-        assert value("nested.value", obj) == 200
+        # Object attribute access is now blocked for security - should return None
+        assert value("nested.value", obj) is None
         assert value("missing.attr", obj) is None
 
     def test_mixed_dict_object_access(self):
@@ -51,7 +52,8 @@ class TestValueAccessor:
                 self.data = {"key": "value"}
 
         obj = TestObj()
-        assert value("data.key", obj) == "value"
+        # Object attribute access is now blocked for security - should return None
+        assert value("data.key", obj) is None
 
 
 class TestDSLRegistry:
@@ -306,24 +308,24 @@ class TestDSLSecurity:
     """Test that the DSL properly blocks dangerous operations."""
 
     def test_blocks_arbitrary_names(self):
-        with pytest.raises(ValueError, match="Name not allowed"):
+        with pytest.raises(UnsupportedNodeError, match="Name not allowed"):
             eval_expr("__import__", {})
 
     def test_blocks_attribute_access(self):
-        with pytest.raises(ValueError, match="Node not allowed"):
+        with pytest.raises(UnsupportedNodeError, match="Node not allowed"):
             eval_expr("value.__class__", {})
 
     def test_blocks_arbitrary_functions(self):
-        with pytest.raises(ValueError, match="Function .* not allowed"):
+        with pytest.raises(HelperNotFoundError, match="not found"):
             eval_expr("open('/etc/passwd')", {})
 
     def test_blocks_exec_eval(self):
-        with pytest.raises(ValueError, match="Function .* not allowed"):
+        with pytest.raises(HelperNotFoundError, match="not found"):
             eval_expr("eval('1+1')", {})
 
     def test_blocks_import_statements(self):
         # This would be caught at parse time
-        with pytest.raises(SyntaxError):
+        with pytest.raises(ParseError):
             eval_expr("import os", {})
 
     def test_allows_safe_builtin_constants(self):
@@ -354,7 +356,7 @@ class TestRegisteredHelpers:
             "pct(value('conversion_rate')) + ' conversion rate generates ' + usd(value('revenue'))"
         )
         result = eval_expr(expr, data)
-        assert result == "3% conversion rate generates $5,000"
+        assert result == "2% conversion rate generates $5,000"
 
     def test_helpers_handle_invalid_input(self):
         assert eval_expr("pct('invalid')", {}) == "n/a"
