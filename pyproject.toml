@@ -16,6 +16,17 @@ service = [
     "uvicorn[standard]>=0.30",
 ]
 
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nav_insights"]
+
 [tool.ruff]
 line-length = 100
 # Lowest common target across CI matrix

@@ -1,0 +1,68 @@
+{
+  "analyzer": "placement_audit",
+  "customer_id": "edge-case-account",
+  "analysis_period": {
+    "start_date": "2025-08-01T00:00:00Z",
+    "end_date": "2025-08-07T23:59:59Z"
+  },
+  "timestamp": "2025-08-24T10:15:30Z",
+  "summary": {
+    "total_placements_analyzed": 5,
+    "poor_performing_placements": 3,
+    "recommendations_count": 2,
+    "potential_monthly_savings": 125.50,
+    "priority_level": "MEDIUM"
+  },
+  "detailed_findings": {
+    "poor_performers": [
+      {
+        "placement_url": "https://www.example-with-protocol.com/path?param=value",
+        "network": "search partners",
+        "cost": 0,
+        "conversions": 0,
+        "clicks": 0,
+        "impressions": 1000,
+        "ctr": 0.0,
+        "conversion_rate": 0.0,
+        "cpa": "N/A",
+        "campaign": "",
+        "ad_group": null,
+        "recommendation": "No engagement - consider exclusion"
+      },
+      {
+        "placement_url": "site-with-special-chars!@#$.com",
+        "network": "unknown_network",
+        "cost": 50.25,
+        "conversions": 0,
+        "clicks": 15,
+        "impressions": null,
+        "ctr": null,
+        "conversion_rate": "invalid",
+        "cpa": "N/A",
+        "campaign": "Test Campaign",
+        "ad_group": "Edge Cases",
+        "recommendation": ""
+      }
+    ],
+    "top_performers": [
+      {
+        "placement_url": "",
+        "network": "gmail",
+        "cost": 99.99,
+        "conversions": 10,
+        "clicks": 250,
+        "impressions": 5000,
+        "ctr": 5.0,
+        "conversion_rate": 4.0,
+        "cpa": 9.99,
+        "campaign": "Email Campaign",
+        "ad_group": "Gmail Promotions",
+        "recommendation": "Top performer with high rates"
+      }
+    ],
+    "recommendations": [
+      "Review data quality - some placements have missing information",
+      "Consider minimum impression thresholds for placement evaluation"
+    ]
+  }
+}
