@@ -47,10 +47,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         recommendation = item.get("recommendation")
         summary = f"Underperforming keyword '{name}' ({match_type})"
         severity = _map_priority(inp.summary.get("priority_level"))
-        metrics: Dict[str, Decimal] = {
-            "cost": Decimal(str(item.get("cost", 0))),
-            "conversions": Decimal(str(item.get("conversions", 0))),
-        }
+        metrics: Dict[str, Decimal] = {"cost": Decimal(str(item.get("cost", 0))), "conversions": Decimal(str(item.get("conversions", 0)))}
         if (cpa := item.get("cpa")) not in (None, "N/A"):
             metrics["cpa"] = Decimal(str(cpa))
         findings.append(
@@ -72,10 +69,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         recommendation = item.get("recommendation")
         summary = f"Top performer '{name}' ({match_type})"
         severity = _map_priority(inp.summary.get("priority_level"))
-        metrics: Dict[str, Decimal] = {
-            "cost": Decimal(str(item.get("cost", 0))),
-            "conversions": Decimal(str(item.get("conversions", 0))),
-        }
+        metrics: Dict[str, Decimal] = {"cost": Decimal(str(item.get("cost", 0))), "conversions": Decimal(str(item.get("conversions", 0)))}
         if (cpa := item.get("cpa")) is not None:
             metrics["cpa"] = Decimal(str(cpa))
         findings.append(
@@ -91,11 +85,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         )
 
     evidence = Evidence(source="paid_search_nav.keyword")
-    prov = AnalyzerProvenance(
-        name=inp.analyzer,
-        version="unknown",
-        finished_at=datetime.fromisoformat(inp.timestamp),
-    )
+    prov = AnalyzerProvenance(name=inp.analyzer, finished_at=datetime.fromisoformat(inp.timestamp))
 
     af = AuditFindings(
         account=account,

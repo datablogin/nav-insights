@@ -52,9 +52,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
                 summary=summary,
                 severity=severity,
                 metrics={
-                    "impression_share_overlap": Decimal(
-                        str(item.get("impression_share_overlap", 0))
-                    ),
+                    "impression_share_overlap": Decimal(str(item.get("impression_share_overlap", 0))),
                     "shared_keywords": Decimal(str(item.get("shared_keywords", 0))),
                 },
                 dims={
@@ -65,11 +63,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         )
 
     evidence = Evidence(source="paid_search_nav.competitor_insights")
-    prov = AnalyzerProvenance(
-        name=inp.analyzer,
-        version="unknown",
-        finished_at=datetime.fromisoformat(inp.timestamp),
-    )
+    prov = AnalyzerProvenance(name=inp.analyzer, finished_at=datetime.fromisoformat(inp.timestamp))
 
     af = AuditFindings(
         account=account,
