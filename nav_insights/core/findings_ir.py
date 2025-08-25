@@ -1,9 +1,32 @@
-# findings_ir.py  (Pydantic v2; works with v1 via model_json_schema fallback)
+"""Core IR base types for nav_insights engine.
+
+This module defines the foundational data structures for audit findings and analytics.
+All monetary values use Decimal precision to avoid floating-point errors.
+
+Data Type Conventions:
+- Rates: Store as decimals in [0,1] range (use Rate01/Pct01 types)
+- Money: Store as Decimal with currency code (use Money type)
+- Counts: Store as int or float for aggregated values
+- Dates: Use datetime with timezone awareness for generated_at
+- Currency: 3-letter ISO codes (USD, EUR, etc.) with configurable defaults
+
+Units and Precision:
+- Monetary amounts: Decimal with 4 decimal places (supports sub-cent precision)
+- Percentages/rates: Decimal with 5 decimal places (supports 0.001% precision)
+- Currency codes: Uppercase 3-letter ISO 4217 codes (validated with regex)
+
+Environment Variables:
+- NAV_INSIGHTS_DEFAULT_CURRENCY: Set default currency code (default: "USD")
+
+Pydantic v2 compatible with v1 fallback for JSON schema export.
+"""
+
 from __future__ import annotations
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional
+import os
 
 from pydantic import BaseModel, Field, condecimal, confloat, model_validator
 
@@ -13,6 +36,24 @@ USD = condecimal(
 )  # store as Decimal; convert to cents downstream if preferred
 Rate01 = condecimal(ge=0, le=1, max_digits=6, decimal_places=5)  # probabilities/ratios in [0,1]
 Pct01 = Rate01  # alias for clarity
+
+
+# ---------- Money with currency semantics ----------
+class Money(BaseModel):
+    """Money type with amount and currency code, preserving Decimal precision"""
+
+    amount: condecimal(max_digits=18, decimal_places=4) = Decimal("0")
+    currency: str = Field(
+        default_factory=lambda: os.getenv("NAV_INSIGHTS_DEFAULT_CURRENCY", "USD"),
+        pattern=r"^[A-Z]{3}$",
+        description="3-letter ISO currency code",
+    )
+
+    @model_validator(mode="after")
+    def _validate_amount(self):
+        if self.amount < 0:
+            raise ValueError("Money amount cannot be negative")
+        return self
 
 
 # ---------- Dimensions / entity references ----------
@@ -67,6 +108,7 @@ class FindingCategory(str, Enum):
     tracking = "tracking"
     creative = "creative"
     conflicts = "conflicts"
+    audience = "audience"
     other = "other"
 
 
@@ -117,10 +159,13 @@ class DateRange(BaseModel):
 
 
 class Totals(BaseModel):
-    spend_usd: USD = Decimal("0")
+    spend: Money = Field(default_factory=Money)
     clicks: int = 0
     impressions: int = 0
     conversions: Decimal = Decimal("0")
+    revenue: Money = Field(default_factory=Money)
+    # Legacy USD fields for backward compatibility
+    spend_usd: USD = Decimal("0")
     revenue_usd: USD = Decimal("0")
     # add more canonical totals (cpa_usd, roas, ctr, etc.) at merge-time as derived values
 
@@ -139,7 +184,7 @@ class Aggregates(BaseModel):
 # ---------- The IR root ----------
 class AuditFindings(BaseModel):
     schema_version: str = "1.0.0"
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     account: AccountMeta
     date_range: DateRange
@@ -176,6 +221,37 @@ class AuditFindings(BaseModel):
     @model_validator(mode="after")
     def _sanity(self):
         # Example sanity checks (tune to your needs)
+        if self.totals.spend.amount < 0:
+            raise ValueError("Totals.spend.amount cannot be negative")
         if self.totals.spend_usd < 0:
             raise ValueError("Totals.spend_usd cannot be negative")
         return self
+
+
+# ---------- JSON Schema export utilities ----------
+def get_model_json_schema(model_class: type[BaseModel]) -> Dict[str, Any]:
+    """Export JSON Schema for a Pydantic model (v2 compatible with v1 fallback)"""
+    try:
+        # Pydantic v2
+        return model_class.model_json_schema()
+    except AttributeError:
+        # Pydantic v1 fallback
+        return model_class.schema()
+
+
+def export_all_schemas() -> Dict[str, Dict[str, Any]]:
+    """Export JSON schemas for all core IR models"""
+    models = {
+        "Money": Money,
+        "EntityRef": EntityRef,
+        "Evidence": Evidence,
+        "AnalyzerProvenance": AnalyzerProvenance,
+        "Finding": Finding,
+        "AccountMeta": AccountMeta,
+        "DateRange": DateRange,
+        "Totals": Totals,
+        "Aggregates": Aggregates,
+        "AuditFindings": AuditFindings,
+    }
+
+    return {name: get_model_json_schema(model_class) for name, model_class in models.items()}

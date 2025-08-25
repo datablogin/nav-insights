@@ -1,0 +1,111 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-08-24T14:00:00Z",
+  "account": {
+    "account_id": "FB-123-456-789",
+    "account_name": "Social Media Brand"
+  },
+  "date_range": {
+    "start_date": "2025-07-15",
+    "end_date": "2025-08-15"
+  },
+  "totals": {
+    "spend": {
+      "amount": "25000.0",
+      "currency": "USD"
+    },
+    "clicks": 45000,
+    "impressions": 1500000,
+    "conversions": "650.0",
+    "revenue": {
+      "amount": "95000.0",
+      "currency": "USD"
+    },
+    "spend_usd": "25000.0",
+    "revenue_usd": "95000.0"
+  },
+  "aggregates": {
+    "match_type": {},
+    "quality_score": {},
+    "devices": {
+      "mobile": 0.78,
+      "desktop": 0.22,
+      "tablet": 0.00
+    }
+  },
+  "pmax": {},
+  "conflicts": {},
+  "geo": {
+    "top_performing_regions_count": 5,
+    "underperforming_regions_count": 8
+  },
+  "findings": [
+    {
+      "id": "CREATIVE_FATIGUE",
+      "category": "creative",
+      "summary": "Ad creative showing signs of fatigue",
+      "description": "CTR declining over time for main creative set",
+      "severity": "medium",
+      "confidence": 0.82,
+      "entities": [
+        {
+          "type": "campaign",
+          "id": "campaign_123",
+          "name": "Summer Collection 2025",
+          "extra": {
+            "objective": "conversions"
+          }
+        }
+      ],
+      "dims": {
+        "platform": "facebook",
+        "placement": "feed"
+      },
+      "metrics": {
+        "ctr_decline_pct": "0.15",
+        "days_since_launch": "45"
+      },
+      "evidence": [
+        {
+          "source": "facebook_ads.insights",
+          "query": "creatives performance over time",
+          "rows": 500,
+          "sample": [],
+          "checksum": "social123",
+          "entities": []
+        }
+      ],
+      "provenance": {
+        "name": "creative_fatigue_analyzer",
+        "version": "1.0.0",
+        "git_sha": "social456def789",
+        "started_at": "2025-08-24T13:45:00Z",
+        "finished_at": "2025-08-24T13:50:00Z"
+      }
+    }
+  ],
+  "index": {},
+  "data_sources": [
+    {
+      "source": "facebook_ads.api",
+      "query": null,
+      "rows": 25000,
+      "sample": [],
+      "checksum": "social789",
+      "entities": []
+    }
+  ],
+  "analyzers": [
+    {
+      "name": "creative_fatigue_analyzer",
+      "version": "1.0.0",
+      "git_sha": "social456def789",
+      "started_at": "2025-08-24T13:45:00Z",
+      "finished_at": "2025-08-24T13:50:00Z"
+    }
+  ],
+  "completeness": {
+    "tracking_ok": true,
+    "has_creative_data": true
+  }
+}
