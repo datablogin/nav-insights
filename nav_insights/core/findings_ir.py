@@ -5,7 +5,7 @@ All monetary values use Decimal precision to avoid floating-point errors.
 
 Data Type Conventions:
 - Rates: Store as decimals in [0,1] range (use Rate01/Pct01 types)
-- Money: Store as Decimal with currency code (use Money type)  
+- Money: Store as Decimal with currency code (use Money type)
 - Counts: Store as int or float for aggregated values
 - Dates: Use datetime with timezone awareness for generated_at
 - Currency: 3-letter ISO codes (USD, EUR, etc.) with configurable defaults
@@ -20,6 +20,7 @@ Environment Variables:
 
 Pydantic v2 compatible with v1 fallback for JSON schema export.
 """
+
 from __future__ import annotations
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -36,15 +37,16 @@ USD = condecimal(
 Rate01 = condecimal(ge=0, le=1, max_digits=6, decimal_places=5)  # probabilities/ratios in [0,1]
 Pct01 = Rate01  # alias for clarity
 
+
 # ---------- Money with currency semantics ----------
 class Money(BaseModel):
     """Money type with amount and currency code, preserving Decimal precision"""
 
     amount: condecimal(max_digits=18, decimal_places=4) = Decimal("0")
     currency: str = Field(
-        default_factory=lambda: os.getenv("NAV_INSIGHTS_DEFAULT_CURRENCY", "USD"), 
-        pattern=r"^[A-Z]{3}$", 
-        description="3-letter ISO currency code"
+        default_factory=lambda: os.getenv("NAV_INSIGHTS_DEFAULT_CURRENCY", "USD"),
+        pattern=r"^[A-Z]{3}$",
+        description="3-letter ISO currency code",
     )
 
     @model_validator(mode="after")

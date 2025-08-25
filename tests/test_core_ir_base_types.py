@@ -231,7 +231,7 @@ class TestPerformance:
         is_ci = os.getenv("CI", "").lower() in ("true", "1")
         threshold_ms = 10.0 if is_ci else 5.0
         env_label = "CI" if is_ci else "local"
-        
+
         assert avg_time_ms < threshold_ms, (
             f"Average validation time {avg_time_ms:.3f}ms exceeds {threshold_ms}ms requirement ({env_label})"
         )
