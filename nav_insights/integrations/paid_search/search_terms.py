@@ -53,7 +53,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
                 start = dt.date()
                 end = dt.date()
             except ValueError:
-                # Final fallback to current date
+                # Fallback to current date if timestamp is malformed
                 dt = datetime.now(timezone.utc)
                 start = dt.date()
                 end = dt.date()

@@ -41,7 +41,10 @@ git push origin [branch-name]
 - ✅ **Immediate Steps**: Latest commit `23463ff` - Ruff formatting applied
 - ✅ **Main**: Latest commit `1ad1bfb` - Base repository state
 - 🔄 **Parsers**: Latest commit `4e7ae0a` - Current work in main directory; PR #52 open
+<<<<<<< HEAD
 - 🧩 **DSL Hardening**: Tracking Issue #54 — branch `feat/dsl-hardening`
+=======
+>>>>>>> origin/main
 
 ### When to Create New Worktrees
 
