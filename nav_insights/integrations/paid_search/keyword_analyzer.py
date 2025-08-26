@@ -18,6 +18,7 @@ from ...core.ir_base import (
     EntityRef,
     Totals,
 )
+from .utils import map_priority_level
 
 
 class KeywordAnalyzerInput(BaseModel):
@@ -36,8 +37,20 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
     """
     inp = KeywordAnalyzerInput.model_validate(data)
 
-    start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
-    end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    try:
+        start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
+        end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    except (KeyError, ValueError):
+        # Fallback to timestamp-based date if analysis_period is malformed
+        try:
+            dt = datetime.fromisoformat(inp.timestamp)
+            start = dt.date()
+            end = dt.date()
+        except ValueError:
+            # Final fallback to current date
+            dt = datetime.now(timezone.utc)
+            start = dt.date()
+            end = dt.date()
 
     account = AccountMeta(account_id=inp.customer_id)
     date_range = DateRange(start_date=start, end_date=end)
@@ -54,7 +67,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         recommendation = item.get("recommendation") or "Review keyword performance"
 
         summary = f"Underperforming keyword '{name}' ({match_type})"
-        severity = _map_priority(inp.summary.get("priority_level"))
+        severity = map_priority_level(inp.summary.get("priority_level"))
 
         # Build metrics, handling N/A values
         # Ensure non-negative costs and conversions
@@ -169,6 +182,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
     try:
         finished_at = datetime.fromisoformat(inp.timestamp)
     except ValueError:
+        # Fallback to current time if timestamp is malformed
         finished_at = datetime.now(timezone.utc)
     prov = AnalyzerProvenance(
         name=inp.analyzer,
