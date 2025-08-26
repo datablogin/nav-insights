@@ -1,7 +1,7 @@
 from __future__ import annotations
 import hashlib
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List
 
@@ -40,8 +40,20 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     """
     inp = CompetitorInsightsInput.model_validate(data)
 
-    start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
-    end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    try:
+        start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
+        end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    except (KeyError, ValueError):
+        # Fallback to timestamp-based date if analysis_period is malformed
+        try:
+            dt = datetime.fromisoformat(inp.timestamp)
+            start = dt.date()
+            end = dt.date()
+        except ValueError:
+            # Final fallback to current date
+            dt = datetime.now(timezone.utc)
+            start = dt.date()
+            end = dt.date()
 
     account = AccountMeta(account_id=inp.customer_id)
     date_range = DateRange(start_date=start, end_date=end)
@@ -182,10 +194,16 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
 
     # Create global evidence and provenance
     evidence = Evidence(source="paid_search_nav.competitor_insights", rows=len(findings))
+    try:
+        finished_at = datetime.fromisoformat(inp.timestamp)
+    except ValueError:
+        # Fallback to current time if timestamp is malformed
+        finished_at = datetime.now(timezone.utc)
+
     prov = AnalyzerProvenance(
         name=inp.analyzer,
         version="unknown",
-        finished_at=datetime.fromisoformat(inp.timestamp),
+        finished_at=finished_at,
     )
 
     af = AuditFindings(
