@@ -121,7 +121,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         recommendation = item.get("recommendation") or "Continue monitoring performance"
 
         summary = f"Top performing keyword '{name}' ({match_type})"
-        # Top performers typically have low severity since they're doing well
+        # Top performers typically have low severity since they're performing well
         severity = Severity.low
 
         # Build metrics
@@ -201,3 +201,12 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         index=index,
     )
     return af
+
+
+def _map_priority(level: Any) -> Severity:
+    s = str(level or "").lower()
+    if s in ("critical", "high"):
+        return Severity.high
+    if s == "medium":
+        return Severity.medium
+    return Severity.low

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List
@@ -12,10 +13,11 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
+    Severity,
     EntityRef,
     EntityType,
+    Totals,
 )
-from .utils import map_priority_level
 
 
 class SearchTermsInput(BaseModel):
@@ -28,7 +30,10 @@ class SearchTermsInput(BaseModel):
 
 
 def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
-    """Minimal parser scaffold mapping PaidSearchNav SearchTermsAnalyzer output to AuditFindings."""
+    """Minimal parser scaffold mapping PaidSearchNav SearchTermsAnalyzer output to AuditFindings.
+
+    See docs/mappings/paid_search/search_terms_to_ir.md for details.
+    """
     inp = SearchTermsInput.model_validate(data)
 
     # Fallbacks if some headers missing (Topgolf sample shape differs)
@@ -76,31 +81,27 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         term = str(item.get("term", ""))
         kw = item.get("keyword_triggered")
         summary = f"Wasteful search term '{term}' — add negative"
-        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
+        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
 
         # Create entities as per spec
         entities = [EntityRef(type=EntityType.search_term, id=f"st:{term}", name=term)]
         if kw:
             entities.append(EntityRef(type=EntityType.keyword, id=f"kw:{kw}", name=str(kw)))
 
-        finding_id = f"ST_WASTE_{term}"
-        # Build metrics
-        validated_metrics = {
-            "cost": Decimal(str(item.get("cost", 0))),
-            "conversions": Decimal(str(item.get("conversions", 0))),
-            "clicks": Decimal(str(item.get("clicks", 0))),
-        }
-
         findings.append(
             Finding(
-                id=finding_id,
+                id=f"ST_WASTE_{term}",
                 category="keywords",
                 summary=summary,
                 description=item.get("recommendation"),
                 severity=severity,
                 entities=entities,
                 dims={"keyword_triggered": kw} if kw else {},
-                metrics=validated_metrics,
+                metrics={
+                    "cost": Decimal(str(item.get("cost", 0))),
+                    "conversions": Decimal(str(item.get("conversions", 0))),
+                    "clicks": Decimal(str(item.get("clicks", 0))),
+                },
             )
         )
 
@@ -108,28 +109,25 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     for item in inp.detailed_findings.get("negative_keyword_suggestions") or []:
         neg = str(item.get("negative_keyword", ""))
         summary = f"Negative keyword suggestion '{neg}'"
-        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
+        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
 
         # Build dims according to spec
-        dims = {}
+        dims: Dict[str, Any] = {}
         if item.get("match_type"):
             dims["match_type"] = str(item["match_type"])
         if item.get("reason"):
             dims["reason"] = str(item["reason"])
 
-        finding_id = f"ST_NEG_{neg}"
-        validated_metrics = {"estimated_savings_usd": Decimal(str(item.get("estimated_savings", 0)))}
-
         findings.append(
             Finding(
-                id=finding_id,
+                id=f"ST_NEG_{neg}",
                 category="keywords",
                 summary=summary,
                 description=item.get("reason"),
                 severity=severity,
                 entities=[],  # No specific entities for suggestions per spec
                 dims=dims,
-                metrics=validated_metrics,
+                metrics={"estimated_savings_usd": Decimal(str(item.get("estimated_savings", 0)))},
             )
         )
 
@@ -150,9 +148,18 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     af = AuditFindings(
         account=account,
         date_range=date_range,
-        totals={},
+        totals=Totals(),
         findings=findings,
         data_sources=[evidence],
         analyzers=[prov],
     )
     return af
+
+
+def _map_priority(level: Any) -> Severity:
+    s = str(level or "").lower()
+    if s in ("critical", "high"):
+        return "high"  # type: ignore[return-value]
+    if s == "medium":
+        return "medium"  # type: ignore[return-value]
+    return "low"  # type: ignore[return-value]

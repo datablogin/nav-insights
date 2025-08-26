@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import hashlib
 import re
 from datetime import datetime, timezone
@@ -7,7 +8,7 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel
 
-from ...core.findings_ir import (
+from ...core.ir_base import (
     AuditFindings,
     AccountMeta,
     DateRange,
@@ -23,10 +24,10 @@ from ...core.findings_ir import (
 
 class CompetitorInsightsInput(BaseModel):
     analyzer: str
-    customer_id: str
-    analysis_period: Dict[str, str]
-    timestamp: str
-    summary: Dict[str, Any]
+    customer_id: str | None = None
+    analysis_period: Dict[str, str] | None = None
+    timestamp: str | None = None
+    summary: Dict[str, Any] | None = None
     detailed_findings: Dict[str, Any]
 
 
@@ -40,29 +41,38 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     """
     inp = CompetitorInsightsInput.model_validate(data)
 
-    try:
-        start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
-        end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
-    except (KeyError, ValueError):
-        # Fallback to timestamp-based date if analysis_period is malformed
+    # Determine date range with robust fallbacks
+    if inp.analysis_period:
         try:
-            dt = datetime.fromisoformat(inp.timestamp)
+            start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
+            end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+        except (KeyError, ValueError):
+            try:
+                dt = datetime.fromisoformat(inp.timestamp or "")
+                start = dt.date()
+                end = dt.date()
+            except ValueError:
+                dt = datetime.now(timezone.utc)
+                start = dt.date()
+                end = dt.date()
+    else:
+        try:
+            dt = datetime.fromisoformat(inp.timestamp or "")
             start = dt.date()
             end = dt.date()
         except ValueError:
-            # Final fallback to current date
             dt = datetime.now(timezone.utc)
             start = dt.date()
             end = dt.date()
 
-    account = AccountMeta(account_id=inp.customer_id)
+    account = AccountMeta(account_id=inp.customer_id or "unknown")
     date_range = DateRange(start_date=start, end_date=end)
 
     findings: List[Finding] = []
-    global_severity = _map_priority(inp.summary.get("priority_level"))
+    global_severity = _map_priority((inp.summary or {}).get("priority_level"))
 
     # Primary competitors → one finding per item
-    for item in inp.detailed_findings.get("primary_competitors", []) or []:
+    for item in (inp.detailed_findings.get("primary_competitors") or []):
         competitor = str(item.get("competitor", "unknown"))
         competitor_clean = _sanitize_id(competitor, add_hash=True)
 
@@ -72,7 +82,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         )
 
         # Build metrics
-        metrics = {}
+        metrics: Dict[str, Decimal] = {}
         if "impression_share_overlap" in item:
             metrics["impression_share_overlap"] = Decimal(str(item["impression_share_overlap"]))
         if "average_position_vs_you" in item:
@@ -83,7 +93,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
             metrics["monthly_search_volume"] = Decimal(str(item["monthly_search_volume"]))
 
         # Build dimensions
-        dims = {}
+        dims: Dict[str, Any] = {}
         if "cost_competition_level" in item:
             dims["cost_competition_level"] = item["cost_competition_level"]
         if "competitive_threat_level" in item:
@@ -114,16 +124,16 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         )
 
     # Keyword gaps → one finding per gap
-    for gap in inp.detailed_findings.get("keyword_gaps", []) or []:
+    for gap in (inp.detailed_findings.get("keyword_gaps") or []):
         keyword = str(gap.get("keyword", "unknown"))
         keyword_clean = _sanitize_id(keyword, add_hash=True)
-        competitor_using = gap.get("competitor_using", [])
+        competitor_using = gap.get("competitor_using", []) or []
 
         # Create keyword entity
         keyword_entity = EntityRef(type=EntityType.keyword, id=f"kw:{keyword_clean}", name=keyword)
 
         # Create entities for competitors using this keyword
-        entities = [keyword_entity]
+        entities: List[EntityRef] = [keyword_entity]
         for comp in competitor_using:
             comp_clean = _sanitize_id(str(comp), add_hash=True)
             entities.append(
@@ -172,8 +182,8 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         )
 
     # Store high-level summary metrics in custom analyzer fields
-    competition_metrics = {}
-    summary_data = inp.summary
+    competition_metrics: Dict[str, Decimal] = {}
+    summary_data = inp.summary or {}
     if summary_data:
         if "opportunity_score" in summary_data:
             competition_metrics["opportunity_score"] = Decimal(
@@ -195,7 +205,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     # Create global evidence and provenance
     evidence = Evidence(source="paid_search_nav.competitor_insights", rows=len(findings))
     try:
-        finished_at = datetime.fromisoformat(inp.timestamp)
+        finished_at = datetime.fromisoformat(inp.timestamp or "")
     except ValueError:
         # Fallback to current time if timestamp is malformed
         finished_at = datetime.now(timezone.utc)
@@ -236,15 +246,13 @@ def _determine_competitor_severity(item: Dict[str, Any], global_severity: Severi
 
     # Use the higher severity, or global if neither available
     if threat_severity and cost_severity:
-        # Compare severities: high > medium > low
-        severity_order = {Severity.low: 0, Severity.medium: 1, Severity.high: 2}
-        return max(threat_severity, cost_severity, key=lambda s: severity_order[s])
-    elif threat_severity:
+        severity_order = {"low": 0, "medium": 1, "high": 2}
+        return max(threat_severity, cost_severity, key=lambda s: severity_order[str(s)])  # type: ignore[arg-type]
+    if threat_severity:
         return threat_severity
-    elif cost_severity:
+    if cost_severity:
         return cost_severity
-    else:
-        return global_severity
+    return global_severity
 
 
 def _determine_keyword_gap_severity(gap: Dict[str, Any], global_severity: Severity) -> Severity:
@@ -253,24 +261,22 @@ def _determine_keyword_gap_severity(gap: Dict[str, Any], global_severity: Severi
     Uses the competition level if available, falling back to global severity.
     """
     competition_level = gap.get("competition", "")
-
     if competition_level:
         return _map_priority(competition_level)
-    else:
-        return global_severity
+    return global_severity
 
 
 def _map_priority(level: Any) -> Severity:
-    """Map priority level to Severity enum.
+    """Map priority level to severity string.
 
     CRITICAL→high, HIGH→high, MEDIUM→medium, LOW→low
     """
     s = str(level or "").lower()
-    if s in ("critical", "high"):  # map CRITICAL→high
-        return Severity.high
+    if s in ("critical", "high"):
+        return "high"  # type: ignore[return-value]
     if s == "medium":
-        return Severity.medium
-    return Severity.low
+        return "medium"  # type: ignore[return-value]
+    return "low"  # type: ignore[return-value]
 
 
 def _sanitize_id(text: str, add_hash: bool = False) -> str:

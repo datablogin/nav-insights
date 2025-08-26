@@ -3,14 +3,35 @@ import ast
 import operator as op
 from typing import Any, Dict, Callable, Optional
 
-# Import exceptions from a stable module to avoid class identity changes across reloads
-from .dsl_exceptions import (
-    ExpressionError,
-    ParseError,
-    UnsupportedNodeError,
-    HelperNotFoundError,
-    ResourceLimitError,
-)
+
+class ExpressionError(Exception):
+    """Base exception for DSL expression evaluation errors."""
+
+    pass
+
+
+class ParseError(ExpressionError):
+    """Exception raised for syntax errors in expressions."""
+
+    pass
+
+
+class UnsupportedNodeError(ExpressionError):
+    """Exception raised for unsupported AST nodes."""
+
+    pass
+
+
+class HelperNotFoundError(ExpressionError):
+    """Exception raised when a helper function is not found."""
+
+    pass
+
+
+class ResourceLimitError(ExpressionError):
+    """Exception raised when resource limits are exceeded."""
+
+    pass
 
 
 def value(path: str, root: Any, default=None) -> Any:
@@ -248,21 +269,17 @@ class SafeEval(ast.NodeVisitor):
         if isinstance(node.op, ast.And):
             last_val = None
             for operand in node.values:
-                val = self.visit(operand)
-                if val is None:
-                    return False
-                if not val:
-                    return val
-                last_val = val
-            return last_val
+                result = self.visit(operand)
+                if not result:
+                    return result  # Return the falsy value (could be False, 0, None, etc.)
+            return result  # All were truthy, return the last one
         elif isinstance(node.op, ast.Or):
             last_val = None
             for operand in node.values:
-                val = self.visit(operand)
-                if val:
-                    return val
-                last_val = val
-            return False if last_val is None else last_val
+                result = self.visit(operand)
+                if result:
+                    return result  # Return the truthy value
+            return result  # All were falsy, return the last one
         else:
             raise UnsupportedNodeError(f"Boolean operator not allowed: {type(node.op).__name__}")
 
