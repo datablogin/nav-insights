@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List
 
@@ -12,8 +12,8 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
-    Severity,
 )
+from .utils import map_priority_level
 
 
 class CompetitorInsightsInput(BaseModel):
@@ -32,8 +32,20 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     """
     inp = CompetitorInsightsInput.model_validate(data)
 
-    start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
-    end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    try:
+        start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
+        end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    except (KeyError, ValueError):
+        # Fallback to timestamp-based date if analysis_period is malformed
+        try:
+            dt = datetime.fromisoformat(inp.timestamp)
+            start = dt.date()
+            end = dt.date()
+        except ValueError:
+            # Final fallback to current date
+            dt = datetime.now(timezone.utc)
+            start = dt.date()
+            end = dt.date()
 
     account = AccountMeta(account_id=inp.customer_id)
     date_range = DateRange(start_date=start, end_date=end)
@@ -44,7 +56,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     for item in inp.detailed_findings.get("primary_competitors", []) or []:
         competitor = str(item.get("competitor", "unknown"))
         summary = f"Competitor overlap: {competitor}"
-        severity = _map_priority(inp.summary.get("priority_level"))
+        severity = map_priority_level(inp.summary.get("priority_level"))
         findings.append(
             Finding(
                 id=f"COMPETITOR_{competitor}",
@@ -65,10 +77,16 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         )
 
     evidence = Evidence(source="paid_search_nav.competitor_insights")
+    try:
+        finished_at = datetime.fromisoformat(inp.timestamp)
+    except ValueError:
+        # Fallback to current time if timestamp is malformed
+        finished_at = datetime.now(timezone.utc)
+
     prov = AnalyzerProvenance(
         name=inp.analyzer,
         version="unknown",
-        finished_at=datetime.fromisoformat(inp.timestamp),
+        finished_at=finished_at,
     )
 
     af = AuditFindings(
@@ -80,12 +98,3 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         analyzers=[prov],
     )
     return af
-
-
-def _map_priority(level: Any) -> Severity:
-    s = str(level or "").lower()
-    if s in ("critical", "high"):  # map CRITICAL→high
-        return Severity.high
-    if s == "medium":
-        return Severity.medium
-    return Severity.low
