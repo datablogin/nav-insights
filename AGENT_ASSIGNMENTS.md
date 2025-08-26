@@ -11,7 +11,7 @@ Each agent should work in their designated worktree directory to avoid conflicts
 | **Main Agent** | `/nav_insights-main/` | `main` | Production releases, merges |
 | **Immediate Steps Agent** | `/nav_insights-immediate-steps/` | `feat/immediate-steps` | Quick tasks |
 | **Parser Agent** | `/nav_insights/` | `feat/paid-search-parsers` | Parsing functionality |
-| **Available** | - | - | Ready for next issue assignment |
+| **Issue #39 Agent** | `/nav_insights-issue-39/` | `feat/issue-39` | Negative conflicts analyzer → IR mapping |
 | **DSL Hardening Agent** | `/nav_insights-dsl-hardening/` | `feat/dsl-hardening` | Core DSL hardening |
 
 ### Agent Commands
@@ -41,10 +41,7 @@ git push origin [branch-name]
 - ✅ **Immediate Steps**: Latest commit `23463ff` - Ruff formatting applied
 - ✅ **Main**: Latest commit `1ad1bfb` - Base repository state
 - 🔄 **Parsers**: Latest commit `4e7ae0a` - Current work in main directory; PR #52 open
-<<<<<<< HEAD
 - 🧩 **DSL Hardening**: Tracking Issue #54 — branch `feat/dsl-hardening`
-=======
->>>>>>> origin/main
 
 ### When to Create New Worktrees
 

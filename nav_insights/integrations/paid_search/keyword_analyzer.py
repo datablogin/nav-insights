@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List
 
 from pydantic import BaseModel
@@ -12,6 +12,9 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
+    Severity,
+    EntityRef,
+    Totals,
 )
 from .utils import map_priority_level
 
@@ -26,7 +29,7 @@ class KeywordAnalyzerInput(BaseModel):
 
 
 def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
-    """Minimal parser scaffold mapping PaidSearchNav KeywordAnalyzer output to AuditFindings.
+    """Parse PaidSearchNav KeywordAnalyzer output to Core IR AuditFindings.
 
     See docs/mappings/paid_search/keyword_analyzer_to_ir.md for full mapping details.
     """
@@ -51,56 +54,113 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
     date_range = DateRange(start_date=start, end_date=end)
 
     findings: List[Finding] = []
+    finding_counter = 0
 
     # Underperforming keywords → findings
     for item in inp.detailed_findings.get("underperforming_keywords", []) or []:
-        name = str(item.get("name", "unknown"))
-        match_type = str(item.get("match_type", ""))
-        recommendation = item.get("recommendation")
+        finding_counter += 1
+        name = str(item.get("name", "unknown")).strip() or "unknown"
+        match_type = str(item.get("match_type", "UNKNOWN")).upper()
+        campaign = str(item.get("campaign", "")).strip() or "Unknown Campaign"
+        recommendation = item.get("recommendation") or "Review keyword performance"
+
         summary = f"Underperforming keyword '{name}' ({match_type})"
         severity = map_priority_level(inp.summary.get("priority_level"))
+
+        # Build metrics, handling N/A values
+        # Ensure non-negative costs and conversions
+        cost = Decimal(str(item.get("cost", 0)))
+        conversions = Decimal(str(item.get("conversions", 0)))
+        if cost < 0 or conversions < 0:
+            raise ValueError("Cost and conversions must be non-negative")
+
         metrics: Dict[str, Decimal] = {
-            "cost": Decimal(str(item.get("cost", 0))),
-            "conversions": Decimal(str(item.get("conversions", 0))),
+            "cost": cost,
+            "conversions": conversions,
         }
         if (cpa := item.get("cpa")) not in (None, "N/A"):
-            metrics["cpa"] = Decimal(str(cpa))
+            try:
+                metrics["cpa"] = Decimal(str(cpa))
+            except (InvalidOperation, ValueError):
+                # Skip invalid CPA values (e.g., non-numeric strings)
+                pass
+
+        # Build entities according to spec
+        entities = [
+            EntityRef(type="keyword", id=f"kw:{name}", name=name),
+            EntityRef(type="campaign", id=f"cmp:{campaign}", name=campaign),
+        ]
+
         findings.append(
             Finding(
-                id=f"KW_UNDER_{name}",
+                id=f"keyword_analyzer_{inp.customer_id}_under_{finding_counter}_{name[:20].replace(' ', '_')}",
                 category="keywords",
                 summary=summary,
                 description=recommendation,
                 severity=severity,
-                dims={"match_type": match_type, "campaign": item.get("campaign")},
+                entities=entities,
+                dims={"match_type": match_type, "campaign": campaign},
                 metrics=metrics,
             )
         )
 
-    # Top performers → findings
+    # Top performers → findings (typically low severity as they're performing well)
     for item in inp.detailed_findings.get("top_performers", []) or []:
-        name = str(item.get("name", "unknown"))
-        match_type = str(item.get("match_type", ""))
-        recommendation = item.get("recommendation")
-        summary = f"Top performer '{name}' ({match_type})"
-        severity = map_priority_level(inp.summary.get("priority_level"))
+        finding_counter += 1
+        name = str(item.get("name", "unknown")).strip() or "unknown"
+        match_type = str(item.get("match_type", "UNKNOWN")).upper()
+        campaign = str(item.get("campaign", "")).strip() or "Unknown Campaign"
+        recommendation = item.get("recommendation") or "Continue monitoring performance"
+
+        summary = f"Top performing keyword '{name}' ({match_type})"
+        # Top performers typically have low severity since they're doing well
+        severity = Severity.low
+
+        # Build metrics
+        cost = Decimal(str(item.get("cost", 0)))
+        conversions = Decimal(str(item.get("conversions", 0)))
+        if cost < 0 or conversions < 0:
+            raise ValueError("Cost and conversions must be non-negative")
+
         metrics: Dict[str, Decimal] = {
-            "cost": Decimal(str(item.get("cost", 0))),
-            "conversions": Decimal(str(item.get("conversions", 0))),
+            "cost": cost,
+            "conversions": conversions,
         }
         if (cpa := item.get("cpa")) not in (None, "N/A"):
-            metrics["cpa"] = Decimal(str(cpa))
+            try:
+                metrics["cpa"] = Decimal(str(cpa))
+            except (InvalidOperation, ValueError):
+                # Skip invalid CPA values (e.g., non-numeric strings)
+                pass
+
+        # Build entities according to spec
+        entities = [
+            EntityRef(type="keyword", id=f"kw:{name}", name=name),
+            EntityRef(type="campaign", id=f"cmp:{campaign}", name=campaign),
+        ]
+
         findings.append(
             Finding(
-                id=f"KW_TOP_{name}",
+                id=f"keyword_analyzer_{inp.customer_id}_top_{finding_counter}_{name[:20].replace(' ', '_')}",
                 category="keywords",
                 summary=summary,
                 description=recommendation,
                 severity=severity,
-                dims={"match_type": match_type, "campaign": item.get("campaign")},
+                entities=entities,
+                dims={"match_type": match_type, "campaign": campaign},
                 metrics=metrics,
             )
         )
+
+    # Build index summary from summary data (Aggregates does not allow arbitrary keys)
+    index = {}
+    if inp.summary:
+        index["keyword_summary"] = {
+            "total_analyzed": inp.summary.get("total_keywords_analyzed", 0),
+            "recommendations_count": inp.summary.get("recommendations_count", 0),
+            "potential_monthly_savings": float(inp.summary.get("potential_monthly_savings", 0)),
+            "priority_level": inp.summary.get("priority_level", "UNKNOWN"),
+        }
 
     evidence = Evidence(source="paid_search_nav.keyword")
     try:
@@ -111,16 +171,33 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
 
     prov = AnalyzerProvenance(
         name=inp.analyzer,
-        version="unknown",
+        version="1.0.0",  # Version from the KeywordAnalyzer implementation
         finished_at=finished_at,
     )
 
     af = AuditFindings(
         account=account,
         date_range=date_range,
-        totals={},
+        totals=Totals(),
         findings=findings,
         data_sources=[evidence],
         analyzers=[prov],
+        index=index,
     )
     return af
+
+
+def _map_priority(level: Any) -> Severity:
+    """Map analyzer priority levels to IR severity.
+
+    CRITICAL → high
+    HIGH → high
+    MEDIUM → medium
+    LOW → low
+    """
+    s = str(level or "").upper()
+    if s in ("CRITICAL", "HIGH"):
+        return Severity.high
+    if s == "MEDIUM":
+        return Severity.medium
+    return Severity.low
