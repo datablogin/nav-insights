@@ -1,0 +1,81 @@
+{
+  "analyzer": "KeywordAnalyzer",
+  "customer_id": "cotton_patch_001",
+  "analysis_period": {
+    "start_date": "2025-08-01T00:00:00",
+    "end_date": "2025-08-24T23:59:59"
+  },
+  "timestamp": "2025-08-24T18:07:11",
+  "summary": {
+    "total_keywords_analyzed": 245,
+    "recommendations_count": 18,
+    "potential_monthly_savings": 3450.75,
+    "priority_level": "HIGH"
+  },
+  "detailed_findings": {
+    "underperforming_keywords": [
+      {
+        "name": "restaurant near me",
+        "match_type": "BROAD",
+        "cost": 892.45,
+        "conversions": 0,
+        "cpa": "N/A",
+        "campaign": "Cotton Patch - Generic Terms",
+        "recommendation": "Pause - Zero conversions after $892.45 spend"
+      },
+      {
+        "name": "food delivery",
+        "match_type": "BROAD",
+        "cost": 567.23,
+        "conversions": 2,
+        "cpa": 283.62,
+        "campaign": "Cotton Patch - Delivery",
+        "recommendation": "Consider pausing or refining - CPA exceeds target by 400%"
+      },
+      {
+        "name": "dinner restaurant",
+        "match_type": "PHRASE",
+        "cost": 234.56,
+        "conversions": 1,
+        "cpa": 234.56,
+        "campaign": "Cotton Patch - Generic Terms",
+        "recommendation": "Reduce bid by 30% - CPA above threshold"
+      }
+    ],
+    "top_performers": [
+      {
+        "name": "cotton patch cafe menu",
+        "match_type": "EXACT",
+        "cost": 456.78,
+        "conversions": 28,
+        "cpa": 16.31,
+        "campaign": "Cotton Patch - Brand",
+        "recommendation": "Increase budget allocation - Strong ROI performance"
+      },
+      {
+        "name": "cotton patch locations",
+        "match_type": "PHRASE",
+        "cost": 234.56,
+        "conversions": 15,
+        "cpa": 15.64,
+        "campaign": "Cotton Patch - Brand",
+        "recommendation": "Maintain current strategy - Performing well"
+      },
+      {
+        "name": "comfort food near me",
+        "match_type": "BROAD",
+        "cost": 789.12,
+        "conversions": 35,
+        "cpa": 22.55,
+        "campaign": "Cotton Patch - Category",
+        "recommendation": "Consider expanding to similar keywords"
+      }
+    ],
+    "recommendations": [
+      "Pause 3 underperforming broad match keywords to save $1,694.24/month",
+      "Reallocate budget from underperformers to top brand keywords",
+      "Test more exact match variations of high-performing keywords",
+      "Review negative keyword list to prevent irrelevant traffic"
+    ]
+  }
+}
