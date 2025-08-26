@@ -1653,4 +1653,3 @@ def test_video_creative_input_validation():
     # Values should be clamped to valid ranges
     assert finding.metrics["view_rate"] == Decimal("1.0")  # Clamped to 1.0
     assert finding.metrics["performance_score"] == Decimal("0")  # Clamped to 0
->>>>>>> refs/remotes/origin/main
