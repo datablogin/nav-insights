@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List
 
@@ -13,6 +13,8 @@ from ...core.ir_base import (
     AnalyzerProvenance,
     Finding,
     Severity,
+    EntityRef,
+    EntityType,
 )
 
 
@@ -36,7 +38,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     customer_id = inp.customer_id or str(
         data.get("customer_id") or data.get("account_id") or "unknown"
     )
-    timestamp = inp.timestamp or str(data.get("timestamp") or datetime.utcnow().isoformat())
+    timestamp = inp.timestamp or str(data.get("timestamp") or datetime.now(timezone.utc).isoformat())
 
     if inp.analysis_period:
         start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
@@ -58,6 +60,24 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         kw = item.get("keyword_triggered")
         summary = f"Wasteful search term '{term}' — add negative"
         severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
+        
+        # Create entities as per spec
+        entities = [
+            EntityRef(
+                type=EntityType.search_term,
+                id=f"st:{term}",
+                name=term
+            )
+        ]
+        if kw:
+            entities.append(
+                EntityRef(
+                    type=EntityType.keyword,
+                    id=f"kw:{kw}",
+                    name=str(kw)
+                )
+            )
+        
         findings.append(
             Finding(
                 id=f"ST_WASTE_{term}",
@@ -65,6 +85,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
                 summary=summary,
                 description=item.get("recommendation"),
                 severity=severity,
+                entities=entities,
                 dims={"keyword_triggered": kw} if kw else {},
                 metrics={
                     "cost": Decimal(str(item.get("cost", 0))),
@@ -79,6 +100,14 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         neg = str(item.get("negative_keyword", ""))
         summary = f"Negative keyword suggestion '{neg}'"
         severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
+        
+        # Build dims according to spec
+        dims = {}
+        if item.get("match_type"):
+            dims["match_type"] = str(item["match_type"])
+        if item.get("reason"):
+            dims["reason"] = str(item["reason"])
+        
         findings.append(
             Finding(
                 id=f"ST_NEG_{neg}",
@@ -86,7 +115,8 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
                 summary=summary,
                 description=item.get("reason"),
                 severity=severity,
-                dims={"match_type": item.get("match_type")},
+                entities=[],  # No specific entities for suggestions per spec
+                dims=dims,
                 metrics={"estimated_savings_usd": Decimal(str(item.get("estimated_savings", 0)))},
             )
         )
