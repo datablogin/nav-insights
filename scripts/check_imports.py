@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""
+Static analyzer to enforce core/domain boundaries.
+
+This script prevents imports from domains/* or integrations/* in core modules
+to maintain the engine's reusability.
+"""
+
+import ast
+import sys
+from pathlib import Path
+from typing import List, Tuple
+
+
+class ImportViolationChecker(ast.NodeVisitor):
+    """AST visitor to check for forbidden imports in core modules."""
+
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+        self.violations: List[Tuple[int, str]] = []
+        self.forbidden_patterns = [
+            "nav_insights.domains",
+            "nav_insights.integrations",
+            ".domains",
+            ".integrations",
+        ]
+
+    def _is_forbidden_import(self, module_name: str) -> bool:
+        """Check if a module name matches forbidden patterns."""
+        # Check absolute imports like nav_insights.domains.* or nav_insights.integrations.*
+        if any(
+            module_name.startswith(pattern)
+            for pattern in self.forbidden_patterns
+            if not pattern.startswith(".")
+        ):
+            return True
+
+        # Check relative imports like .domains, ..domains, .integrations, ..integrations
+        for pattern in ["domains", "integrations"]:
+            if (
+                module_name == f".{pattern}"
+                or module_name.startswith(f".{pattern}.")
+                or module_name == f"..{pattern}"
+                or module_name.startswith(f"..{pattern}.")
+            ):
+                return True
+
+        return False
+
+    def visit_Import(self, node: ast.Import) -> None:
+        """Check import statements."""
+        for alias in node.names:
+            if self._is_forbidden_import(alias.name):
+                self.violations.append((node.lineno, f"Forbidden import: import {alias.name}"))
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        """Check from...import statements."""
+        if node.module:
+            # Reconstruct the full module path including relative import dots
+            full_module_name = node.module
+            if node.level > 0:
+                full_module_name = "." * node.level + node.module
+
+            if self._is_forbidden_import(full_module_name):
+                names = ", ".join(alias.name for alias in node.names)
+                # Show the full import as it appears in the source
+                import_prefix = "." * node.level if node.level > 0 else ""
+                self.violations.append(
+                    (
+                        node.lineno,
+                        f"Forbidden import: from {import_prefix}{node.module} import {names}",
+                    )
+                )
+        self.generic_visit(node)
+
+
+def check_core_imports(root_path: Path) -> List[Tuple[str, int, str]]:
+    """
+    Check all Python files in nav_insights/core for forbidden imports.
+
+    Returns:
+        List of violations as (file_path, line_number, message) tuples
+    """
+    violations = []
+    core_path = root_path / "nav_insights" / "core"
+
+    if not core_path.exists():
+        print(f"Warning: Core path {core_path} does not exist")
+        return violations
+
+    # Get all Python files in core
+    python_files = list(core_path.rglob("*.py"))
+
+    for py_file in python_files:
+        try:
+            with open(py_file, "r", encoding="utf-8") as f:
+                source = f.read()
+
+            tree = ast.parse(source, filename=str(py_file))
+            checker = ImportViolationChecker(str(py_file))
+            checker.visit(tree)
+
+            for line_no, message in checker.violations:
+                violations.append((str(py_file), line_no, message))
+
+        except SyntaxError as e:
+            violations.append((str(py_file), e.lineno or 0, f"Syntax error: {e}"))
+        except Exception as e:
+            violations.append((str(py_file), 0, f"Error processing file: {e}"))
+
+    return violations
+
+
+def main() -> int:
+    """Main entry point."""
+    root_path = Path(__file__).parent.parent
+    violations = check_core_imports(root_path)
+
+    if not violations:
+        print("✅ All core imports are valid - no cross-layer violations found")
+        return 0
+
+    print("❌ Cross-layer import violations found:")
+    print()
+
+    for file_path, line_no, message in violations:
+        rel_path = Path(file_path).relative_to(root_path)
+        print(f"  {rel_path}:{line_no} - {message}")
+
+    print()
+    print(f"Total violations: {len(violations)}")
+    print()
+    print("Core modules must not import from domains/* or integrations/* packages.")
+    print("This maintains the engine's reusability across different domain implementations.")
+
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
