@@ -28,10 +28,7 @@ class SearchTermsInput(BaseModel):
 
 
 def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
-    """Minimal parser scaffold mapping PaidSearchNav SearchTermsAnalyzer output to AuditFindings.
-
-    See docs/mappings/paid_search/search_terms_to_ir.md for details.
-    """
+    """Minimal parser scaffold mapping PaidSearchNav SearchTermsAnalyzer output to AuditFindings."""
     inp = SearchTermsInput.model_validate(data)
 
     # Fallbacks if some headers missing (Topgolf sample shape differs)
@@ -86,20 +83,24 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         if kw:
             entities.append(EntityRef(type=EntityType.keyword, id=f"kw:{kw}", name=str(kw)))
 
+        finding_id = f"ST_WASTE_{term}"
+        # Build metrics
+        validated_metrics = {
+            "cost": Decimal(str(item.get("cost", 0))),
+            "conversions": Decimal(str(item.get("conversions", 0))),
+            "clicks": Decimal(str(item.get("clicks", 0))),
+        }
+
         findings.append(
             Finding(
-                id=f"ST_WASTE_{term}",
+                id=finding_id,
                 category="keywords",
                 summary=summary,
                 description=item.get("recommendation"),
                 severity=severity,
                 entities=entities,
                 dims={"keyword_triggered": kw} if kw else {},
-                metrics={
-                    "cost": Decimal(str(item.get("cost", 0))),
-                    "conversions": Decimal(str(item.get("conversions", 0))),
-                    "clicks": Decimal(str(item.get("clicks", 0))),
-                },
+                metrics=validated_metrics,
             )
         )
 
@@ -116,20 +117,24 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         if item.get("reason"):
             dims["reason"] = str(item["reason"])
 
+        finding_id = f"ST_NEG_{neg}"
+        validated_metrics = {"estimated_savings_usd": Decimal(str(item.get("estimated_savings", 0)))}
+
         findings.append(
             Finding(
-                id=f"ST_NEG_{neg}",
+                id=finding_id,
                 category="keywords",
                 summary=summary,
                 description=item.get("reason"),
                 severity=severity,
                 entities=[],  # No specific entities for suggestions per spec
                 dims=dims,
-                metrics={"estimated_savings_usd": Decimal(str(item.get("estimated_savings", 0)))},
+                metrics=validated_metrics,
             )
         )
 
     evidence = Evidence(source="paid_search_nav.search_terms")
+
     try:
         finished_at = datetime.fromisoformat(timestamp)
     except ValueError:
