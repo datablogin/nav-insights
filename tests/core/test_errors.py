@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 
 from nav_insights.core.errors import CoreError, to_core_error
 from nav_insights.core import dsl_exceptions as dslx
