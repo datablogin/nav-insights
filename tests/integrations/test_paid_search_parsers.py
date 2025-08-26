@@ -1254,7 +1254,7 @@ def test_video_creative_smoke():
                     "campaign": "Test Campaign",
                     "ad_group": "Test Ad Group",
                     "recommendation": "Improve creative",
-                    "performance_score": 0.20
+                    "performance_score": 0.20,
                 }
             ]
         },
@@ -1277,7 +1277,7 @@ def test_video_creative_comprehensive():
             "top_performers_count": 1,
             "total_video_spend_micros": 2500000000,
             "average_view_rate": 0.15,
-            "priority_level": "HIGH"
+            "priority_level": "HIGH",
         },
         "detailed_findings": {
             "poor_performers": [
@@ -1294,11 +1294,11 @@ def test_video_creative_comprehensive():
                     "campaign": "Campaign 1",
                     "ad_group": "Ad Group 1",
                     "recommendation": "Low view rate needs improvement",
-                    "performance_score": 0.15
+                    "performance_score": 0.15,
                 },
                 {
                     "creative_id": "poor_456",
-                    "creative_name": "Another Poor Video", 
+                    "creative_name": "Another Poor Video",
                     "video_duration_seconds": 45,
                     "impressions": 5000,
                     "views": 400,
@@ -1309,8 +1309,8 @@ def test_video_creative_comprehensive():
                     "campaign": "Campaign 2",
                     "ad_group": "Ad Group 2",
                     "recommendation": "Very low view rate",
-                    "performance_score": 0.12
-                }
+                    "performance_score": 0.12,
+                },
             ],
             "top_performers": [
                 {
@@ -1326,26 +1326,26 @@ def test_video_creative_comprehensive():
                     "campaign": "Campaign 3",
                     "ad_group": "Ad Group 3",
                     "recommendation": "Excellent performance - scale up",
-                    "performance_score": 0.85
+                    "performance_score": 0.85,
                 }
-            ]
+            ],
         },
     }
 
     af = parse_video_creative(sample)
-    
+
     # Basic validation
     assert isinstance(af, AuditFindings)
     assert af.account.account_id == "test-account-456"
     assert af.date_range.start_date.isoformat() == "2025-08-01"
     assert af.date_range.end_date.isoformat() == "2025-08-24"
-    
+
     # Should have 2 poor + 1 top = 3 total findings
     assert len(af.findings) == 3
-    
+
     # Check totals conversion from micros
     assert af.totals.spend_usd == Decimal("2500.0")
-    
+
     # Check video metrics in index
     assert "video_metrics" in af.index
     video_metrics = af.index["video_metrics"]
@@ -1353,46 +1353,46 @@ def test_video_creative_comprehensive():
     assert video_metrics["poor_performers_count"] == Decimal("2")
     assert video_metrics["top_performers_count"] == Decimal("1")
     assert video_metrics["average_view_rate"] == Decimal("0.15")
-    
+
     # Check poor performer findings
     poor_findings = [f for f in af.findings if f.id.startswith("poor_video_")]
     assert len(poor_findings) == 2
-    
+
     first_poor = poor_findings[0]
     assert first_poor.category == "creative"
     assert first_poor.severity == "high"  # HIGH priority maps to high severity
     assert first_poor.summary == "Poor video creative: Poor Performance Video"
     assert first_poor.description == "Low view rate needs improvement"
-    
+
     # Check entities (creative + campaign + ad group)
     assert len(first_poor.entities) == 3
     creative_entity = next(e for e in first_poor.entities if e.type.value == "other")
     assert creative_entity.id == "creative:poor_123"
     assert creative_entity.name == "Poor Performance Video"
-    
+
     # Check micro-to-USD conversion
     assert first_poor.metrics["cost_usd"] == Decimal("500.0")
     assert "cpa_usd" not in first_poor.metrics  # N/A should be omitted
-    
+
     # Check video-specific metrics
     assert first_poor.metrics["view_rate"] == Decimal("0.10")
     assert first_poor.metrics["views"] == Decimal("1000")
     assert first_poor.metrics["performance_score"] == Decimal("0.15")
-    
+
     # Check dimensions
     assert first_poor.dims["video_duration_seconds"] == 30
     assert first_poor.dims["campaign"] == "Campaign 1"
     assert first_poor.dims["ad_group"] == "Ad Group 1"
     assert first_poor.dims["performance_score"] == 0.15
-    
+
     # Check second poor performer with valid CPA
     second_poor = poor_findings[1]
     assert second_poor.metrics["cpa_usd"] == Decimal("750.0")  # CPA conversion from micros
-    
+
     # Check top performer findings
     top_findings = [f for f in af.findings if f.id.startswith("top_video_")]
     assert len(top_findings) == 1
-    
+
     top_finding = top_findings[0]
     assert top_finding.severity == "low"  # Top performers have low severity
     assert top_finding.summary == "Top video creative: Top Performance Video"
@@ -1448,14 +1448,16 @@ def test_video_creative_edge_case_fixture():
     assert all(f.severity == "low" for f in poor_findings)
 
     # Check handling of empty creative name - should become "Unknown Creative"
-    empty_name_finding = next((f for f in poor_findings if f.entities[0].name == "Unknown Creative"), None)
+    empty_name_finding = next(
+        (f for f in poor_findings if f.entities[0].name == "Unknown Creative"), None
+    )
     assert empty_name_finding is not None
 
     # Check handling of null campaign/ad_group - should not create entities for null values
     for finding in af.findings:
         campaign_entities = [e for e in finding.entities if e.type.value == "campaign"]
         ad_group_entities = [e for e in finding.entities if e.type.value == "ad_group"]
-        
+
         # If campaign/ad_group are null/empty in fixture, no entities should be created
         # (This tests the null handling fix we implemented)
         if not campaign_entities:
@@ -1471,7 +1473,7 @@ def test_video_creative_priority_mapping():
     """Test priority level to severity mapping."""
     test_cases = [
         ("CRITICAL", "high"),
-        ("HIGH", "high"), 
+        ("HIGH", "high"),
         ("MEDIUM", "medium"),
         ("LOW", "low"),
         ("", "low"),  # default
@@ -1482,7 +1484,10 @@ def test_video_creative_priority_mapping():
         sample = {
             "analyzer": "VideoCreative",
             "customer_id": "test-priority",
-            "analysis_period": {"start_date": "2025-08-01T00:00:00", "end_date": "2025-08-24T00:00:00"},
+            "analysis_period": {
+                "start_date": "2025-08-01T00:00:00",
+                "end_date": "2025-08-24T00:00:00",
+            },
             "timestamp": "2025-08-24T15:30:00",
             "summary": {"priority_level": priority},
             "detailed_findings": {
@@ -1491,10 +1496,10 @@ def test_video_creative_priority_mapping():
                         "creative_id": "test",
                         "creative_name": "Test Creative",
                         "cost_micros": 1000000,
-                        "recommendation": "Test"
+                        "recommendation": "Test",
                     }
                 ]
-            }
+            },
         }
 
         af = parse_video_creative(sample)
@@ -1510,7 +1515,7 @@ def test_video_creative_micro_conversions():
         "timestamp": "2025-08-24T15:30:00",
         "summary": {
             "priority_level": "MEDIUM",
-            "total_video_spend_micros": 1500000000  # 1500 USD
+            "total_video_spend_micros": 1500000000,  # 1500 USD
         },
         "detailed_findings": {
             "poor_performers": [
@@ -1518,18 +1523,18 @@ def test_video_creative_micro_conversions():
                     "creative_id": "conv_test",
                     "creative_name": "Conversion Test",
                     "cost_micros": 2345670000,  # 2345.67 USD
-                    "cpa_micros": 987654321,    # 987.654321 USD
-                    "recommendation": "Test conversion"
+                    "cpa_micros": 987654321,  # 987.654321 USD
+                    "recommendation": "Test conversion",
                 }
             ]
-        }
+        },
     }
 
     af = parse_video_creative(sample)
-    
+
     # Check totals conversion
     assert af.totals.spend_usd == Decimal("1500.0")
-    
+
     # Check finding metrics conversion
     finding = af.findings[0]
     assert finding.metrics["cost_usd"] == Decimal("2345.67")
@@ -1551,24 +1556,24 @@ def test_video_creative_null_cpa_handling():
                     "creative_name": "Null CPA Test",
                     "cost_micros": 1000000,
                     "cpa_micros": None,  # null value
-                    "recommendation": "Test null CPA"
+                    "recommendation": "Test null CPA",
                 }
             ],
             "top_performers": [
                 {
                     "creative_id": "na_test",
-                    "creative_name": "N/A CPA Test", 
+                    "creative_name": "N/A CPA Test",
                     "cost_micros": 2000000,
                     "cpa_micros": "N/A",  # String N/A
-                    "recommendation": "Test N/A CPA"
+                    "recommendation": "Test N/A CPA",
                 }
-            ]
-        }
+            ],
+        },
     }
 
     af = parse_video_creative(sample)
     assert len(af.findings) == 2
-    
+
     # Both findings should omit CPA
     for finding in af.findings:
         assert "cpa_usd" not in finding.metrics
@@ -1588,30 +1593,30 @@ def test_video_creative_finding_id_collision_resistance():
                     "creative_id": "test_creative",
                     "creative_name": "Test Creative",
                     "cost_micros": 1000000,
-                    "recommendation": "Test"
+                    "recommendation": "Test",
                 }
             ]
-        }
+        },
     }
 
     # Same data but different time periods
     sample1 = {
         **base_sample,
-        "analysis_period": {"start_date": "2025-08-01T00:00:00", "end_date": "2025-08-24T00:00:00"}
+        "analysis_period": {"start_date": "2025-08-01T00:00:00", "end_date": "2025-08-24T00:00:00"},
     }
-    
+
     sample2 = {
-        **base_sample, 
-        "analysis_period": {"start_date": "2025-09-01T00:00:00", "end_date": "2025-09-24T00:00:00"}
+        **base_sample,
+        "analysis_period": {"start_date": "2025-09-01T00:00:00", "end_date": "2025-09-24T00:00:00"},
     }
 
     af1 = parse_video_creative(sample1)
     af2 = parse_video_creative(sample2)
-    
+
     # Finding IDs should be different due to date range hash
     finding_id1 = af1.findings[0].id
     finding_id2 = af2.findings[0].id
-    
+
     assert finding_id1 != finding_id2
     assert "collision_test" in finding_id1
     assert "collision_test" in finding_id2
@@ -1636,15 +1641,15 @@ def test_video_creative_input_validation():
                     "view_rate": 1.5,  # Invalid: >1
                     "performance_score": -0.1,  # Invalid: <0
                     "cost_micros": 1000000,
-                    "recommendation": "Test validation"
+                    "recommendation": "Test validation",
                 }
             ]
-        }
+        },
     }
 
     af = parse_video_creative(sample)
     finding = af.findings[0]
-    
+
     # Values should be clamped to valid ranges
     assert finding.metrics["view_rate"] == Decimal("1.0")  # Clamped to 1.0
     assert finding.metrics["performance_score"] == Decimal("0")  # Clamped to 0
