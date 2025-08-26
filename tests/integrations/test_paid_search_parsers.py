@@ -1573,3 +1573,78 @@ def test_video_creative_null_cpa_handling():
     for finding in af.findings:
         assert "cpa_usd" not in finding.metrics
         assert "cost_usd" in finding.metrics  # But cost should be present
+
+
+def test_video_creative_finding_id_collision_resistance():
+    """Test that finding IDs are collision-resistant across different time periods."""
+    base_sample = {
+        "analyzer": "VideoCreative",
+        "customer_id": "collision-test",
+        "timestamp": "2025-08-24T15:30:00",
+        "summary": {"priority_level": "HIGH"},
+        "detailed_findings": {
+            "poor_performers": [
+                {
+                    "creative_id": "test_creative",
+                    "creative_name": "Test Creative",
+                    "cost_micros": 1000000,
+                    "recommendation": "Test"
+                }
+            ]
+        }
+    }
+
+    # Same data but different time periods
+    sample1 = {
+        **base_sample,
+        "analysis_period": {"start_date": "2025-08-01T00:00:00", "end_date": "2025-08-24T00:00:00"}
+    }
+    
+    sample2 = {
+        **base_sample, 
+        "analysis_period": {"start_date": "2025-09-01T00:00:00", "end_date": "2025-09-24T00:00:00"}
+    }
+
+    af1 = parse_video_creative(sample1)
+    af2 = parse_video_creative(sample2)
+    
+    # Finding IDs should be different due to date range hash
+    finding_id1 = af1.findings[0].id
+    finding_id2 = af2.findings[0].id
+    
+    assert finding_id1 != finding_id2
+    assert "collision_test" in finding_id1
+    assert "collision_test" in finding_id2
+    # Should contain date-based hash components
+    assert len(finding_id1.split("_")) >= 4  # type_counter_account_datehash
+    assert len(finding_id2.split("_")) >= 4
+
+
+def test_video_creative_input_validation():
+    """Test that input validation works for numeric ranges."""
+    sample = {
+        "analyzer": "VideoCreative",
+        "customer_id": "validation-test",
+        "analysis_period": {"start_date": "2025-08-01T00:00:00", "end_date": "2025-08-24T00:00:00"},
+        "timestamp": "2025-08-24T15:30:00",
+        "summary": {"priority_level": "MEDIUM"},
+        "detailed_findings": {
+            "poor_performers": [
+                {
+                    "creative_id": "invalid_data",
+                    "creative_name": "Invalid Data Creative",
+                    "view_rate": 1.5,  # Invalid: >1
+                    "performance_score": -0.1,  # Invalid: <0
+                    "cost_micros": 1000000,
+                    "recommendation": "Test validation"
+                }
+            ]
+        }
+    }
+
+    af = parse_video_creative(sample)
+    finding = af.findings[0]
+    
+    # Values should be clamped to valid ranges
+    assert finding.metrics["view_rate"] == Decimal("1.0")  # Clamped to 1.0
+    assert finding.metrics["performance_score"] == Decimal("0")  # Clamped to 0
