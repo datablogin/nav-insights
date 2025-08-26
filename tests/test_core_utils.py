@@ -193,27 +193,21 @@ class TestMetricValidation:
     def test_validate_non_negative_metrics_missing_metric(self):
         """Test validation with missing metric (should be skipped)."""
         metrics = {"conversions": 5}
-        result = validate_non_negative_metrics(
-            metrics, ["cost", "conversions"], "TestParser"
-        )
+        result = validate_non_negative_metrics(metrics, ["cost", "conversions"], "TestParser")
         assert "cost" not in result
         assert result["conversions"] == Decimal("5")
 
     def test_validate_non_negative_metrics_none_value(self):
         """Test validation with None value (should be skipped)."""
         metrics = {"cost": None, "conversions": 5}
-        result = validate_non_negative_metrics(
-            metrics, ["cost", "conversions"], "TestParser"
-        )
+        result = validate_non_negative_metrics(metrics, ["cost", "conversions"], "TestParser")
         assert "cost" not in result
         assert result["conversions"] == Decimal("5")
 
     def test_validate_non_negative_metrics_na_value(self):
         """Test validation with 'N/A' value (should be skipped)."""
         metrics = {"cost": "N/A", "conversions": 5}
-        result = validate_non_negative_metrics(
-            metrics, ["cost", "conversions"], "TestParser"
-        )
+        result = validate_non_negative_metrics(metrics, ["cost", "conversions"], "TestParser")
         assert "cost" not in result
         assert result["conversions"] == Decimal("5")
 
