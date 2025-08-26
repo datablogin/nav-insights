@@ -21,30 +21,51 @@ class ValidatorCLI:
     def __init__(self):
         self.base_path = Path(__file__).parent.parent
         self.schemas_path = self.base_path / "schemas"
+        self._schema_cache: Dict[str, Dict[str, Any]] = {}
+
+    def get_supported_domains(self) -> List[str]:
+        """Get list of supported analyzer domains."""
+        domains = []
+        if self.schemas_path.exists():
+            for domain_dir in self.schemas_path.iterdir():
+                if domain_dir.is_dir() and not domain_dir.name.startswith("."):
+                    domains.append(domain_dir.name)
+        return sorted(domains)
 
     def get_available_types(self) -> List[str]:
         """Get list of available analyzer types for validation."""
         types = []
 
-        # Check paid_search analyzers
-        paid_search_path = self.schemas_path / "paid_search"
-        if paid_search_path.exists():
-            for schema_file in paid_search_path.glob("*.json"):
-                # Convert filename to analyzer type (e.g., keyword_analyzer.json -> paid_search.keyword_analyzer)
-                analyzer_name = schema_file.stem
-                types.append(f"paid_search.{analyzer_name}")
+        # Check all domain directories
+        for domain in self.get_supported_domains():
+            domain_path = self.schemas_path / domain
+            if domain_path.exists():
+                for schema_file in domain_path.glob("*.json"):
+                    # Convert filename to analyzer type (e.g., keyword_analyzer.json -> paid_search.keyword_analyzer)
+                    analyzer_name = schema_file.stem
+                    types.append(f"{domain}.{analyzer_name}")
 
         return sorted(types)
 
     def get_schema_path(self, analyzer_type: str) -> Path:
         """Get the schema file path for a given analyzer type."""
-        if not analyzer_type.startswith("paid_search."):
+        if "." not in analyzer_type:
+            supported_domains = self.get_supported_domains()
             raise ValueError(
-                f"Unsupported analyzer type: {analyzer_type}. Must start with 'paid_search.'"
+                f"Invalid analyzer type format: {analyzer_type}. "
+                f"Expected format: 'domain.analyzer_name'. "
+                f"Supported domains: {', '.join(supported_domains)}"
             )
 
-        analyzer_name = analyzer_type.replace("paid_search.", "")
-        schema_path = self.schemas_path / "paid_search" / f"{analyzer_name}.json"
+        domain, analyzer_name = analyzer_type.split(".", 1)
+
+        supported_domains = self.get_supported_domains()
+        if domain not in supported_domains:
+            raise ValueError(
+                f"Unsupported domain: {domain}. Supported domains: {', '.join(supported_domains)}"
+            )
+
+        schema_path = self.schemas_path / domain / f"{analyzer_name}.json"
 
         if not schema_path.exists():
             raise ValueError(f"Schema not found for analyzer type: {analyzer_type}")
@@ -53,10 +74,22 @@ class ValidatorCLI:
 
     def load_schema(self, analyzer_type: str) -> Dict[str, Any]:
         """Load JSON schema for the given analyzer type."""
+        # Check cache first
+        if analyzer_type in self._schema_cache:
+            return self._schema_cache[analyzer_type]
+
         schema_path = self.get_schema_path(analyzer_type)
 
         with open(schema_path, "r") as f:
-            return json.load(f)
+            schema = json.load(f)
+
+        # Validate that the schema itself is valid
+        if not self.validate_schema_itself(schema):
+            raise ValueError(f"Invalid JSON schema for analyzer type: {analyzer_type}")
+
+        # Cache the schema for future use
+        self._schema_cache[analyzer_type] = schema
+        return schema
 
     def load_payload(self, input_path: str) -> Dict[str, Any]:
         """Load payload from file or stdin."""
@@ -86,13 +119,29 @@ class ValidatorCLI:
         errors = []
 
         for error in validator.iter_errors(payload):
-            # Format error message nicely
-            path = (
-                " -> ".join(str(p) for p in error.absolute_path) if error.absolute_path else "root"
-            )
+            # Format error message with better array index formatting
+            if error.absolute_path:
+                path_parts = []
+                for part in error.absolute_path:
+                    if isinstance(part, int):
+                        # Format array indices as [index] instead of just index
+                        path_parts.append(f"[{part}]")
+                    else:
+                        path_parts.append(str(part))
+                path = " -> ".join(path_parts)
+            else:
+                path = "root"
             errors.append(f"At '{path}': {error.message}")
 
         return len(errors) == 0, errors
+
+    def validate_schema_itself(self, schema: Dict[str, Any]) -> bool:
+        """Validate that the schema is a valid JSON schema."""
+        try:
+            Draft202012Validator.check_schema(schema)
+            return True
+        except Exception:
+            return False
 
     def run_validate(self, analyzer_type: str, input_path: str, verbose: bool = False) -> int:
         """Run validation and return exit code."""

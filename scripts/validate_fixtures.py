@@ -45,14 +45,24 @@ def get_fixtures_to_validate() -> List[Tuple[Path, str]]:
     if not fixtures_dir.exists():
         return []
 
+    # Configurable skip patterns for IR fixtures (not analyzer inputs)
+    # These patterns indicate files that represent IR output, not analyzer input
+    ir_fixture_patterns = [
+        "_fixture",  # Files ending in _fixture (e.g., negative_conflicts_fixture.json)
+        "search_fixture",  # Search IR fixtures
+        "social_fixture",  # Social IR fixtures
+        "negative_conflicts",  # Legacy negative conflicts IR
+    ]
+
     fixtures = []
 
     for fixture_file in fixtures_dir.glob("*.json"):
         # Skip IR fixture files (these are not analyzer inputs)
-        if any(
-            skip in fixture_file.name
-            for skip in ["search_fixture", "social_fixture", "negative_conflicts"]
-        ):
+        # Special handling: files with _fixture in the name are IR fixtures even if they
+        # have _happy_path or _edge_case suffixes
+        is_ir_fixture = any(pattern in fixture_file.name for pattern in ir_fixture_patterns)
+
+        if is_ir_fixture:
             continue
 
         analyzer_type = map_fixture_to_analyzer_type(fixture_file)

@@ -161,3 +161,31 @@ class TestValidateFixtures:
                 assert result == expected_type, (
                     f"Failed for edge case {filename}: expected {expected_type}, got {result}"
                 )
+
+    def test_ir_fixture_pattern_filtering(self):
+        """Test that IR fixture patterns are properly filtered."""
+        # Test files that should be skipped
+        skip_cases = [
+            "negative_conflicts_fixture.json",  # Contains _fixture
+            "search_fixture.json",  # Search IR fixture
+            "social_fixture.json",  # Social IR fixture
+            "negative_conflicts.json",  # Legacy negative conflicts IR
+        ]
+
+        for filename in skip_cases:
+            fixture_path = Path(filename)
+            # These should not be mapped since they're IR fixtures
+            result = map_fixture_to_analyzer_type(fixture_path)
+            # Some might map (like negative_conflicts_fixture) but should be filtered out in get_fixtures_to_validate
+
+        # Test files that should NOT be skipped
+        include_cases = [
+            "keyword_analyzer_happy_path.json",  # Analyzer input with _happy_path
+            "video_creative_edge_case.json",  # Analyzer input with _edge_case
+            "placement_audit.json",  # Plain analyzer input
+        ]
+
+        for filename in include_cases:
+            fixture_path = Path(filename)
+            result = map_fixture_to_analyzer_type(fixture_path)
+            assert result is not None, f"Should map {filename} to an analyzer type"

@@ -43,7 +43,7 @@ class TestValidatorCLI:
 
     def test_load_schema_invalid_type(self):
         """Test loading an invalid schema type."""
-        with pytest.raises(ValueError, match="Unsupported analyzer type"):
+        with pytest.raises(ValueError, match="Unsupported domain"):
             self.cli.load_schema("invalid.type")
 
     def test_load_payload_valid_file(self):
@@ -65,7 +65,9 @@ class TestValidatorCLI:
         test_payload = {"test": "data"}
         test_json = json.dumps(test_payload)
 
-        with patch("sys.stdin.read", return_value=test_json):
+        from io import StringIO
+
+        with patch("sys.stdin", StringIO(test_json)):
             payload = self.cli.load_payload("-")
             assert payload == test_payload
 
@@ -214,3 +216,78 @@ class TestValidatorCLI:
 
                 # Returns 1 for missing args
                 assert result == 1
+
+    def test_get_supported_domains(self):
+        """Test getting supported domains."""
+        domains = self.cli.get_supported_domains()
+
+        # Should include paid_search
+        assert "paid_search" in domains
+
+        # Should be sorted
+        assert domains == sorted(domains)
+
+    def test_schema_caching(self):
+        """Test that schemas are cached for performance."""
+        analyzer_type = "paid_search.keyword_analyzer"
+
+        # Load schema twice
+        schema1 = self.cli.load_schema(analyzer_type)
+        schema2 = self.cli.load_schema(analyzer_type)
+
+        # Should be the same object (cached)
+        assert schema1 is schema2
+
+        # Should be in cache
+        assert analyzer_type in self.cli._schema_cache
+
+    def test_validate_schema_itself(self):
+        """Test schema self-validation."""
+        # Valid schema
+        valid_schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }
+
+        assert self.cli.validate_schema_itself(valid_schema) is True
+
+        # Invalid schema (missing required properties)
+        invalid_schema = {"type": "invalid_type"}
+
+        assert self.cli.validate_schema_itself(invalid_schema) is False
+
+    def test_error_path_formatting_with_arrays(self):
+        """Test that array indices are formatted nicely in error paths."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
+                        "required": ["name"],
+                    },
+                }
+            },
+        }
+
+        # Payload with invalid array item
+        payload = {
+            "items": [
+                {"name": "valid"},
+                {"invalid": "missing name"},  # Missing required 'name'
+            ]
+        }
+
+        is_valid, errors = self.cli.validate_payload(payload, schema)
+        assert is_valid is False
+        assert len(errors) == 1
+        # Should format array index nicely
+        assert "items -> [1]" in errors[0]
+
+    def test_invalid_format_analyzer_type(self):
+        """Test error for invalid analyzer type format."""
+        with pytest.raises(ValueError, match="Invalid analyzer type format"):
+            self.cli.load_schema("invalid_format_no_dot")
