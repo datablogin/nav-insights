@@ -3,7 +3,7 @@ import ast
 import operator as op
 from typing import Any, Dict, Callable, Optional
 
-# Import exceptions from stable module to avoid class identity issues across reloads
+# Import exceptions from a stable module to avoid class identity changes across reloads
 from .dsl_exceptions import (
     ExpressionError,
     ParseError,
