@@ -1,0 +1,76 @@
+{
+  "analyzer": "VideoCreative",
+  "customer_id": "edge-case-123",
+  "analysis_period": {
+    "start_date": "2025-08-15T00:00:00",
+    "end_date": "2025-08-22T00:00:00"
+  },
+  "timestamp": "2025-08-22T10:00:00",
+  "summary": {
+    "total_video_creatives": 8,
+    "poor_performers_count": 2,
+    "top_performers_count": 1,
+    "total_video_spend_micros": 1200000000,
+    "average_view_rate": 0.05,
+    "priority_level": "LOW"
+  },
+  "detailed_findings": {
+    "poor_performers": [
+      {
+        "creative_id": "",
+        "creative_name": "",
+        "video_duration_seconds": 0,
+        "impressions": 1000,
+        "views": 50,
+        "view_rate": 0.05,
+        "cost_micros": 50000000,
+        "conversions": 0,
+        "cpa_micros": null,
+        "campaign": null,
+        "ad_group": "",
+        "recommendation": null,
+        "performance_score": 0.01
+      },
+      {
+        "creative_id": "edge_123",
+        "creative_name": "Creative with Special Chars!@#$%",
+        "video_duration_seconds": 90,
+        "impressions": 500,
+        "views": 15,
+        "view_rate": 0.03,
+        "cost_micros": 25000000,
+        "conversions": 0,
+        "cpa_micros": "N/A",
+        "campaign": "Campaign with-dashes_and underscores",
+        "ad_group": "Ad Group (Parentheses) & Symbols",
+        "recommendation": "Creative performs poorly across all metrics",
+        "performance_score": 0.02
+      }
+    ],
+    "top_performers": [
+      {
+        "creative_id": "top_edge_456",
+        "creative_name": "Edge Case Winner",
+        "video_duration_seconds": 25,
+        "impressions": 2000,
+        "views": 400,
+        "view_rate": 0.20,
+        "cost_micros": 75000000,
+        "conversions": 5,
+        "cpa_micros": 15000000,
+        "campaign": "",
+        "ad_group": null,
+        "recommendation": "Good performance despite limited data",
+        "performance_score": 0.65
+      }
+    ],
+    "insights": [
+      "Limited data available for this period",
+      "Overall video performance needs improvement"
+    ],
+    "recommendations": [
+      "Gather more data before making optimization decisions",
+      "Focus on proven creative formats"
+    ]
+  }
+}
