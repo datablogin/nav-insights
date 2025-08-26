@@ -50,10 +50,10 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         match_type = str(item.get("match_type", "UNKNOWN")).upper()
         campaign = str(item.get("campaign", "")).strip() or "Unknown Campaign"
         recommendation = item.get("recommendation") or "Review keyword performance"
-        
+
         summary = f"Underperforming keyword '{name}' ({match_type})"
         severity = _map_priority(inp.summary.get("priority_level"))
-        
+
         # Build metrics, handling N/A values
         # Ensure non-negative costs and conversions
         cost = Decimal(str(item.get("cost", 0)))
@@ -71,13 +71,13 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
             except (InvalidOperation, ValueError):
                 # Skip invalid CPA values (e.g., non-numeric strings)
                 pass
-        
+
         # Build entities according to spec
         entities = [
             EntityRef(type="keyword", id=f"kw:{name}", name=name),
             EntityRef(type="campaign", id=f"cmp:{campaign}", name=campaign),
         ]
-        
+
         findings.append(
             Finding(
                 id=f"keyword_analyzer_{inp.customer_id}_under_{finding_counter}_{name[:20].replace(' ', '_')}",
@@ -98,11 +98,11 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         match_type = str(item.get("match_type", "UNKNOWN")).upper()
         campaign = str(item.get("campaign", "")).strip() or "Unknown Campaign"
         recommendation = item.get("recommendation") or "Continue monitoring performance"
-        
+
         summary = f"Top performing keyword '{name}' ({match_type})"
         # Top performers typically have low severity since they're doing well
         severity = Severity.low
-        
+
         # Build metrics
         metrics: Dict[str, Decimal] = {
             "cost": Decimal(str(item.get("cost", 0))),
@@ -114,13 +114,13 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
             except (InvalidOperation, ValueError):
                 # Skip invalid CPA values (e.g., non-numeric strings)
                 pass
-        
+
         # Build entities according to spec
         entities = [
             EntityRef(type="keyword", id=f"kw:{name}", name=name),
             EntityRef(type="campaign", id=f"cmp:{campaign}", name=campaign),
         ]
-        
+
         findings.append(
             Finding(
                 id=f"keyword_analyzer_{inp.customer_id}_top_{finding_counter}_{name[:20].replace(' ', '_')}",
@@ -165,9 +165,9 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
 
 def _map_priority(level: Any) -> Severity:
     """Map analyzer priority levels to IR severity.
-    
+
     CRITICAL → high
-    HIGH → high  
+    HIGH → high
     MEDIUM → medium
     LOW → low
     """

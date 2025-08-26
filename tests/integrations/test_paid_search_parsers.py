@@ -357,31 +357,31 @@ def test_keyword_analyzer_happy_path_fixture():
     fixture_path = Path(__file__).parent.parent / "fixtures" / "keyword_analyzer_happy_path.json"
     with open(fixture_path, "r") as f:
         data = json.load(f)
-    
+
     af = parse_keyword_analyzer(data)
     assert isinstance(af, AuditFindings)
-    
+
     # Should have 3 underperformers + 3 top performers = 6 findings
     assert len(af.findings) == 6
-    
+
     # Check account mapping
     assert af.account.account_id == "cotton_patch_001"
-    
+
     # Check date range mapping
     assert af.date_range.start_date.isoformat() == "2025-08-01"
     assert af.date_range.end_date.isoformat() == "2025-08-24"
-    
+
     # Check index structure for keyword summary
     assert "keyword_summary" in af.index
     assert af.index["keyword_summary"]["total_analyzed"] == 245
     assert af.index["keyword_summary"]["recommendations_count"] == 18
     assert af.index["keyword_summary"]["potential_monthly_savings"] == 3450.75
     assert af.index["keyword_summary"]["priority_level"] == "HIGH"
-    
+
     # Check underperforming keywords
     under_findings = [f for f in af.findings if "under" in f.id]
     assert len(under_findings) == 3
-    
+
     # First underperforming keyword should have N/A cpa omitted
     first_under = under_findings[0]
     assert first_under.summary == "Underperforming keyword 'restaurant near me' (BROAD)"
@@ -391,29 +391,29 @@ def test_keyword_analyzer_happy_path_fixture():
     assert first_under.metrics["conversions"] == Decimal("0")
     assert first_under.dims["match_type"] == "BROAD"
     assert first_under.dims["campaign"] == "Cotton Patch - Generic Terms"
-    
+
     # Check entities
     assert len(first_under.entities) == 2
     keyword_entity = next(e for e in first_under.entities if e.type == "keyword")
     assert keyword_entity.id == "kw:restaurant near me"
     assert keyword_entity.name == "restaurant near me"
-    
+
     campaign_entity = next(e for e in first_under.entities if e.type == "campaign")
     assert campaign_entity.id == "cmp:Cotton Patch - Generic Terms"
     assert campaign_entity.name == "Cotton Patch - Generic Terms"
-    
+
     # Second underperformer should have valid CPA
     second_under = under_findings[1]
     assert "cpa" in second_under.metrics
     assert second_under.metrics["cpa"] == Decimal("283.62")
-    
+
     # Check top performers
     top_findings = [f for f in af.findings if "top" in f.id]
     assert len(top_findings) == 3
-    
+
     # Top performers should have low severity
     assert all(f.severity == "low" for f in top_findings)
-    
+
     first_top = top_findings[0]
     assert first_top.summary == "Top performing keyword 'cotton patch cafe menu' (EXACT)"
     assert first_top.metrics["cpa"] == Decimal("16.31")
@@ -425,26 +425,26 @@ def test_keyword_analyzer_edge_case_fixture():
     fixture_path = Path(__file__).parent.parent / "fixtures" / "keyword_analyzer_edge_case.json"
     with open(fixture_path, "r") as f:
         data = json.load(f)
-    
+
     af = parse_keyword_analyzer(data)
     assert isinstance(af, AuditFindings)
-    
+
     # Should have 2 underperformers + 1 top performer = 3 findings
     assert len(af.findings) == 3
-    
+
     # Check LOW priority mapping
     under_findings = [f for f in af.findings if "under" in f.id]
     # LOW priority should map to low severity for underperformers
     assert all(f.severity == "low" for f in under_findings)
-    
+
     # Check handling of empty keyword name
     empty_name_finding = next((f for f in under_findings if "unknown" in f.id), None)
     assert empty_name_finding is not None
     assert "unknown" in empty_name_finding.summary
-    
+
     # Check handling of null recommendation
     assert any(f.description == "Review keyword performance" for f in under_findings)
-    
+
     # Check empty campaign handling
     assert any(f.dims["campaign"] == "Unknown Campaign" for f in under_findings)
 
@@ -454,10 +454,7 @@ def test_keyword_analyzer_severity_mapping():
     base_data = {
         "analyzer": "KeywordAnalyzer",
         "customer_id": "test",
-        "analysis_period": {
-            "start_date": "2025-08-01T00:00:00",
-            "end_date": "2025-08-24T00:00:00"
-        },
+        "analysis_period": {"start_date": "2025-08-01T00:00:00", "end_date": "2025-08-24T00:00:00"},
         "timestamp": "2025-08-24T12:00:00",
         "detailed_findings": {
             "underperforming_keywords": [
@@ -467,32 +464,32 @@ def test_keyword_analyzer_severity_mapping():
                     "cost": 100,
                     "conversions": 0,
                     "campaign": "Test",
-                    "recommendation": "Test"
+                    "recommendation": "Test",
                 }
             ]
-        }
+        },
     }
-    
+
     # Test CRITICAL -> high
     critical_data = {**base_data, "summary": {"priority_level": "CRITICAL"}}
     af = parse_keyword_analyzer(critical_data)
     assert af.findings[0].severity == "high"
-    
+
     # Test HIGH -> high
     high_data = {**base_data, "summary": {"priority_level": "HIGH"}}
     af = parse_keyword_analyzer(high_data)
     assert af.findings[0].severity == "high"
-    
+
     # Test MEDIUM -> medium
     medium_data = {**base_data, "summary": {"priority_level": "MEDIUM"}}
     af = parse_keyword_analyzer(medium_data)
     assert af.findings[0].severity == "medium"
-    
+
     # Test LOW -> low
     low_data = {**base_data, "summary": {"priority_level": "LOW"}}
     af = parse_keyword_analyzer(low_data)
     assert af.findings[0].severity == "low"
-    
+
     # Test unknown/missing -> low (default)
     unknown_data = {**base_data, "summary": {"priority_level": "UNKNOWN"}}
     af = parse_keyword_analyzer(unknown_data)
@@ -504,10 +501,7 @@ def test_keyword_analyzer_match_type_normalization():
     sample = {
         "analyzer": "KeywordAnalyzer",
         "customer_id": "test",
-        "analysis_period": {
-            "start_date": "2025-08-01T00:00:00",
-            "end_date": "2025-08-24T00:00:00"
-        },
+        "analysis_period": {"start_date": "2025-08-01T00:00:00", "end_date": "2025-08-24T00:00:00"},
         "timestamp": "2025-08-24T12:00:00",
         "summary": {"priority_level": "HIGH"},
         "detailed_findings": {
@@ -518,7 +512,7 @@ def test_keyword_analyzer_match_type_normalization():
                     "cost": 100,
                     "conversions": 0,
                     "campaign": "Test",
-                    "recommendation": "Test"
+                    "recommendation": "Test",
                 },
                 {
                     "name": "test2",
@@ -526,12 +520,12 @@ def test_keyword_analyzer_match_type_normalization():
                     "cost": 100,
                     "conversions": 0,
                     "campaign": "Test",
-                    "recommendation": "Test"
-                }
+                    "recommendation": "Test",
+                },
             ]
-        }
+        },
     }
-    
+
     af = parse_keyword_analyzer(sample)
     assert af.findings[0].dims["match_type"] == "BROAD"
     assert af.findings[1].dims["match_type"] == "PHRASE"
@@ -542,10 +536,7 @@ def test_keyword_analyzer_finding_id_uniqueness():
     sample = {
         "analyzer": "KeywordAnalyzer",
         "customer_id": "test123",
-        "analysis_period": {
-            "start_date": "2025-08-01T00:00:00",
-            "end_date": "2025-08-24T00:00:00"
-        },
+        "analysis_period": {"start_date": "2025-08-01T00:00:00", "end_date": "2025-08-24T00:00:00"},
         "timestamp": "2025-08-24T12:00:00",
         "summary": {"priority_level": "HIGH"},
         "detailed_findings": {
@@ -556,7 +547,7 @@ def test_keyword_analyzer_finding_id_uniqueness():
                     "cost": 100,
                     "conversions": 0,
                     "campaign": "Test",
-                    "recommendation": "Test"
+                    "recommendation": "Test",
                 },
                 {
                     "name": "restaurant",  # Same name
@@ -564,8 +555,8 @@ def test_keyword_analyzer_finding_id_uniqueness():
                     "cost": 200,
                     "conversions": 0,
                     "campaign": "Test2",
-                    "recommendation": "Test"
-                }
+                    "recommendation": "Test",
+                },
             ],
             "top_performers": [
                 {
@@ -575,19 +566,19 @@ def test_keyword_analyzer_finding_id_uniqueness():
                     "conversions": 10,
                     "cpa": 30,
                     "campaign": "Test3",
-                    "recommendation": "Good"
+                    "recommendation": "Good",
                 }
-            ]
-        }
+            ],
+        },
     }
-    
+
     af = parse_keyword_analyzer(sample)
     assert len(af.findings) == 3
-    
+
     # All finding IDs should be unique
     finding_ids = [f.id for f in af.findings]
     assert len(finding_ids) == len(set(finding_ids))
-    
+
     # Check ID structure includes type and counter
     assert "under_1" in finding_ids[0]
     assert "under_2" in finding_ids[1]
