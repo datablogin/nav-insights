@@ -1,6 +1,5 @@
 from __future__ import annotations
 from datetime import datetime
-from decimal import Decimal
 from typing import Any, Dict, List
 
 from pydantic import BaseModel
@@ -12,7 +11,12 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
-    Severity,
+)
+from ...core import (
+    ParserError,
+    map_priority_level,
+    generate_finding_id,
+    validate_non_negative_metrics,
 )
 
 
@@ -29,11 +33,30 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     """Minimal parser scaffold mapping PaidSearchNav CompetitorInsightsAnalyzer output to AuditFindings.
 
     See docs/mappings/paid_search/competitor_insights_to_ir.md for full mapping details.
+    
+    Raises:
+        ParserError: If parsing fails due to invalid data
+        CoreError: If validation fails
     """
-    inp = CompetitorInsightsInput.model_validate(data)
+    try:
+        inp = CompetitorInsightsInput.model_validate(data)
+    except Exception as e:
+        raise ParserError(
+            "Failed to validate CompetitorInsights input data",
+            parser_name="CompetitorInsights",
+            original_error=e,
+        )
 
-    start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
-    end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    try:
+        start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
+        end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    except Exception as e:
+        raise ParserError(
+            "Failed to parse analysis period dates",
+            parser_name="CompetitorInsights",
+            context={"analysis_period": inp.analysis_period},
+            original_error=e,
+        )
 
     account = AccountMeta(account_id=inp.customer_id)
     date_range = DateRange(start_date=start, end_date=end)
@@ -44,19 +67,31 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     for item in inp.detailed_findings.get("primary_competitors", []) or []:
         competitor = str(item.get("competitor", "unknown"))
         summary = f"Competitor overlap: {competitor}"
-        severity = _map_priority(inp.summary.get("priority_level"))
+        severity = map_priority_level(inp.summary.get("priority_level"))
+        
+        # Validate and convert metrics
+        raw_metrics = {
+            "impression_share_overlap": item.get("impression_share_overlap", 0),
+            "shared_keywords": item.get("shared_keywords", 0),
+        }
+        
+        # Validate non-negative metrics
+        validated_metrics = validate_non_negative_metrics(
+            raw_metrics,
+            ["impression_share_overlap", "shared_keywords"],
+            parser_name="CompetitorInsights",
+        )
+        
+        # Generate unique finding ID
+        finding_id = generate_finding_id("COMPETITOR", competitor)
+        
         findings.append(
             Finding(
-                id=f"COMPETITOR_{competitor}",
+                id=finding_id,
                 category="other",  # consider 'competition' category in core
                 summary=summary,
                 severity=severity,
-                metrics={
-                    "impression_share_overlap": Decimal(
-                        str(item.get("impression_share_overlap", 0))
-                    ),
-                    "shared_keywords": Decimal(str(item.get("shared_keywords", 0))),
-                },
+                metrics=validated_metrics,
                 dims={
                     "cost_competition_level": item.get("cost_competition_level"),
                     "competitive_threat_level": item.get("competitive_threat_level"),
@@ -65,10 +100,21 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         )
 
     evidence = Evidence(source="paid_search_nav.competitor_insights")
+    
+    try:
+        finished_at = datetime.fromisoformat(inp.timestamp)
+    except Exception as e:
+        raise ParserError(
+            "Failed to parse timestamp",
+            parser_name="CompetitorInsights",
+            context={"timestamp": inp.timestamp},
+            original_error=e,
+        )
+    
     prov = AnalyzerProvenance(
         name=inp.analyzer,
         version="unknown",
-        finished_at=datetime.fromisoformat(inp.timestamp),
+        finished_at=finished_at,
     )
 
     af = AuditFindings(
@@ -80,12 +126,3 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         analyzers=[prov],
     )
     return af
-
-
-def _map_priority(level: Any) -> Severity:
-    s = str(level or "").lower()
-    if s in ("critical", "high"):  # map CRITICAL→high
-        return Severity.high
-    if s == "medium":
-        return Severity.medium
-    return Severity.low

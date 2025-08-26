@@ -1,6 +1,5 @@
 from __future__ import annotations
 from datetime import datetime
-from decimal import Decimal
 from typing import Any, Dict, List
 
 from pydantic import BaseModel
@@ -12,7 +11,13 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
-    Severity,
+)
+from ...core import (
+    ParserError,
+    map_priority_level,
+    generate_finding_id,
+    validate_non_negative_metrics,
+    safe_decimal_conversion,
 )
 
 
@@ -29,11 +34,30 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
     """Minimal parser scaffold mapping PaidSearchNav KeywordAnalyzer output to AuditFindings.
 
     See docs/mappings/paid_search/keyword_analyzer_to_ir.md for full mapping details.
+    
+    Raises:
+        ParserError: If parsing fails due to invalid data
+        CoreError: If validation fails
     """
-    inp = KeywordAnalyzerInput.model_validate(data)
+    try:
+        inp = KeywordAnalyzerInput.model_validate(data)
+    except Exception as e:
+        raise ParserError(
+            "Failed to validate KeywordAnalyzer input data",
+            parser_name="KeywordAnalyzer",
+            original_error=e,
+        )
 
-    start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
-    end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    try:
+        start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
+        end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+    except Exception as e:
+        raise ParserError(
+            "Failed to parse analysis period dates",
+            parser_name="KeywordAnalyzer",
+            context={"analysis_period": inp.analysis_period},
+            original_error=e,
+        )
 
     account = AccountMeta(account_id=inp.customer_id)
     date_range = DateRange(start_date=start, end_date=end)
@@ -46,22 +70,41 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         match_type = str(item.get("match_type", ""))
         recommendation = item.get("recommendation")
         summary = f"Underperforming keyword '{name}' ({match_type})"
-        severity = _map_priority(inp.summary.get("priority_level"))
-        metrics: Dict[str, Decimal] = {
-            "cost": Decimal(str(item.get("cost", 0))),
-            "conversions": Decimal(str(item.get("conversions", 0))),
+        severity = map_priority_level(inp.summary.get("priority_level"))
+        
+        # Validate and convert metrics with proper error handling
+        raw_metrics = {
+            "cost": item.get("cost", 0),
+            "conversions": item.get("conversions", 0),
         }
         if (cpa := item.get("cpa")) not in (None, "N/A"):
-            metrics["cpa"] = Decimal(str(cpa))
+            raw_metrics["cpa"] = cpa
+        
+        # Validate non-negative metrics
+        validated_metrics = validate_non_negative_metrics(
+            raw_metrics,
+            ["cost", "conversions"],  # CPA can be calculated metric, may not need validation
+            parser_name="KeywordAnalyzer",
+        )
+        
+        # Add CPA if present
+        if "cpa" in raw_metrics:
+            validated_metrics["cpa"] = safe_decimal_conversion(
+                raw_metrics["cpa"], "cpa"
+            )
+        
+        # Generate unique finding ID
+        finding_id = generate_finding_id("KW_UNDER", name, match_type)
+        
         findings.append(
             Finding(
-                id=f"KW_UNDER_{name}",
+                id=finding_id,
                 category="keywords",
                 summary=summary,
                 description=recommendation,
                 severity=severity,
                 dims={"match_type": match_type, "campaign": item.get("campaign")},
-                metrics=metrics,
+                metrics=validated_metrics,
             )
         )
 
@@ -71,30 +114,60 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         match_type = str(item.get("match_type", ""))
         recommendation = item.get("recommendation")
         summary = f"Top performer '{name}' ({match_type})"
-        severity = _map_priority(inp.summary.get("priority_level"))
-        metrics: Dict[str, Decimal] = {
-            "cost": Decimal(str(item.get("cost", 0))),
-            "conversions": Decimal(str(item.get("conversions", 0))),
+        severity = map_priority_level(inp.summary.get("priority_level"))
+        
+        # Validate and convert metrics with proper error handling
+        raw_metrics = {
+            "cost": item.get("cost", 0),
+            "conversions": item.get("conversions", 0),
         }
         if (cpa := item.get("cpa")) is not None:
-            metrics["cpa"] = Decimal(str(cpa))
+            raw_metrics["cpa"] = cpa
+        
+        # Validate non-negative metrics
+        validated_metrics = validate_non_negative_metrics(
+            raw_metrics,
+            ["cost", "conversions"],
+            parser_name="KeywordAnalyzer",
+        )
+        
+        # Add CPA if present
+        if "cpa" in raw_metrics:
+            validated_metrics["cpa"] = safe_decimal_conversion(
+                raw_metrics["cpa"], "cpa"
+            )
+        
+        # Generate unique finding ID
+        finding_id = generate_finding_id("KW_TOP", name, match_type)
+        
         findings.append(
             Finding(
-                id=f"KW_TOP_{name}",
+                id=finding_id,
                 category="keywords",
                 summary=summary,
                 description=recommendation,
                 severity=severity,
                 dims={"match_type": match_type, "campaign": item.get("campaign")},
-                metrics=metrics,
+                metrics=validated_metrics,
             )
         )
 
     evidence = Evidence(source="paid_search_nav.keyword")
+    
+    try:
+        finished_at = datetime.fromisoformat(inp.timestamp)
+    except Exception as e:
+        raise ParserError(
+            "Failed to parse timestamp",
+            parser_name="KeywordAnalyzer",
+            context={"timestamp": inp.timestamp},
+            original_error=e,
+        )
+    
     prov = AnalyzerProvenance(
         name=inp.analyzer,
         version="unknown",
-        finished_at=datetime.fromisoformat(inp.timestamp),
+        finished_at=finished_at,
     )
 
     af = AuditFindings(
@@ -106,12 +179,3 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         analyzers=[prov],
     )
     return af
-
-
-def _map_priority(level: Any) -> Severity:
-    s = str(level or "").lower()
-    if s in ("critical", "high"):
-        return Severity.high
-    if s == "medium":
-        return Severity.medium
-    return Severity.low

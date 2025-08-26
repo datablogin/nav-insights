@@ -1,6 +1,5 @@
 from __future__ import annotations
 from datetime import datetime
-from decimal import Decimal
 from typing import Any, Dict, List
 
 from pydantic import BaseModel
@@ -12,7 +11,12 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
-    Severity,
+)
+from ...core import (
+    ParserError,
+    map_priority_level,
+    generate_finding_id,
+    validate_non_negative_metrics,
 )
 
 
@@ -29,8 +33,19 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     """Minimal parser scaffold mapping PaidSearchNav SearchTermsAnalyzer output to AuditFindings.
 
     See docs/mappings/paid_search/search_terms_to_ir.md for details.
+    
+    Raises:
+        ParserError: If parsing fails due to invalid data
+        CoreError: If validation fails
     """
-    inp = SearchTermsInput.model_validate(data)
+    try:
+        inp = SearchTermsInput.model_validate(data)
+    except Exception as e:
+        raise ParserError(
+            "Failed to validate SearchTerms input data",
+            parser_name="SearchTermsAnalyzer",
+            original_error=e,
+        )
 
     # Fallbacks if some headers missing (Topgolf sample shape differs)
     customer_id = inp.customer_id or str(
@@ -38,14 +53,22 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     )
     timestamp = inp.timestamp or str(data.get("timestamp") or datetime.utcnow().isoformat())
 
-    if inp.analysis_period:
-        start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
-        end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
-    else:
-        # derive a dummy window if not present
-        dt = datetime.fromisoformat(timestamp)
-        start = dt.date()
-        end = dt.date()
+    try:
+        if inp.analysis_period:
+            start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
+            end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+        else:
+            # derive a dummy window if not present
+            dt = datetime.fromisoformat(timestamp)
+            start = dt.date()
+            end = dt.date()
+    except Exception as e:
+        raise ParserError(
+            "Failed to parse dates",
+            parser_name="SearchTermsAnalyzer",
+            context={"analysis_period": inp.analysis_period, "timestamp": timestamp},
+            original_error=e,
+        )
 
     account = AccountMeta(account_id=customer_id)
     date_range = DateRange(start_date=start, end_date=end)
@@ -57,20 +80,34 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         term = str(item.get("term", ""))
         kw = item.get("keyword_triggered")
         summary = f"Wasteful search term '{term}' — add negative"
-        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
+        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
+        
+        # Validate and convert metrics
+        raw_metrics = {
+            "cost": item.get("cost", 0),
+            "conversions": item.get("conversions", 0),
+            "clicks": item.get("clicks", 0),
+        }
+        
+        # Validate non-negative metrics
+        validated_metrics = validate_non_negative_metrics(
+            raw_metrics,
+            ["cost", "conversions", "clicks"],
+            parser_name="SearchTermsAnalyzer",
+        )
+        
+        # Generate unique finding ID
+        finding_id = generate_finding_id("ST_WASTE", term)
+        
         findings.append(
             Finding(
-                id=f"ST_WASTE_{term}",
+                id=finding_id,
                 category="keywords",
                 summary=summary,
                 description=item.get("recommendation"),
                 severity=severity,
                 dims={"keyword_triggered": kw} if kw else {},
-                metrics={
-                    "cost": Decimal(str(item.get("cost", 0))),
-                    "conversions": Decimal(str(item.get("conversions", 0))),
-                    "clicks": Decimal(str(item.get("clicks", 0))),
-                },
+                metrics=validated_metrics,
             )
         )
 
@@ -78,24 +115,51 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     for item in inp.detailed_findings.get("negative_keyword_suggestions") or []:
         neg = str(item.get("negative_keyword", ""))
         summary = f"Negative keyword suggestion '{neg}'"
-        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
+        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
+        
+        # Validate and convert metrics
+        raw_metrics = {
+            "estimated_savings_usd": item.get("estimated_savings", 0),
+        }
+        
+        # Validate non-negative metrics
+        validated_metrics = validate_non_negative_metrics(
+            raw_metrics,
+            ["estimated_savings_usd"],
+            parser_name="SearchTermsAnalyzer",
+        )
+        
+        # Generate unique finding ID
+        finding_id = generate_finding_id("ST_NEG", neg)
+        
         findings.append(
             Finding(
-                id=f"ST_NEG_{neg}",
+                id=finding_id,
                 category="keywords",
                 summary=summary,
                 description=item.get("reason"),
                 severity=severity,
                 dims={"match_type": item.get("match_type")},
-                metrics={"estimated_savings_usd": Decimal(str(item.get("estimated_savings", 0)))},
+                metrics=validated_metrics,
             )
         )
 
     evidence = Evidence(source="paid_search_nav.search_terms")
+    
+    try:
+        finished_at = datetime.fromisoformat(timestamp)
+    except Exception as e:
+        raise ParserError(
+            "Failed to parse timestamp",
+            parser_name="SearchTermsAnalyzer",
+            context={"timestamp": timestamp},
+            original_error=e,
+        )
+    
     prov = AnalyzerProvenance(
         name=inp.analyzer or "SearchTermsAnalyzer",
         version="unknown",
-        finished_at=datetime.fromisoformat(timestamp),
+        finished_at=finished_at,
     )
 
     af = AuditFindings(
@@ -107,12 +171,3 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         analyzers=[prov],
     )
     return af
-
-
-def _map_priority(level: Any) -> Severity:
-    s = str(level or "").lower()
-    if s in ("critical", "high"):
-        return Severity.high
-    if s == "medium":
-        return Severity.medium
-    return Severity.low
