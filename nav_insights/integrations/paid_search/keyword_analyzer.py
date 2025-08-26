@@ -55,9 +55,15 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         severity = _map_priority(inp.summary.get("priority_level"))
         
         # Build metrics, handling N/A values
+        # Ensure non-negative costs and conversions
+        cost = Decimal(str(item.get("cost", 0)))
+        conversions = Decimal(str(item.get("conversions", 0)))
+        if cost < 0 or conversions < 0:
+            raise ValueError("Cost and conversions must be non-negative")
+
         metrics: Dict[str, Decimal] = {
-            "cost": Decimal(str(item.get("cost", 0))),
-            "conversions": Decimal(str(item.get("conversions", 0))),
+            "cost": cost,
+            "conversions": conversions,
         }
         if (cpa := item.get("cpa")) not in (None, "N/A"):
             try:
