@@ -69,6 +69,23 @@ pytest
 
 The example loads a small **Paid Search IR** and emits a few **Actions** using the starter ruleset.
 
+### Validation CLI
+
+Use the `nav-insights` CLI to validate analyzer payloads against JSON schemas:
+
+```bash
+# List available analyzer types
+nav-insights validate --list-types
+
+# Validate a file
+nav-insights validate --type paid_search.keyword_analyzer --input data.json
+
+# Validate from stdin  
+cat data.json | nav-insights validate --type paid_search.search_terms --input -
+```
+
+See [docs/schemas/README.md](docs/schemas/README.md) for detailed usage.
+
 ---
 
 ## Core data models
