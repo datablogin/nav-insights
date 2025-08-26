@@ -13,6 +13,7 @@ Each agent should work in their designated worktree directory to avoid conflicts
 | **Parser Agent** | `/nav_insights/` | `feat/paid-search-parsers` | Parsing functionality |
 | **Issue #39 Agent** | `/nav_insights-issue-39/` | `feat/issue-39` | Negative conflicts analyzer → IR mapping |
 | **DSL Hardening Agent** | `/nav_insights-dsl-hardening/` | `feat/dsl-hardening` | Core DSL hardening |
+| **Error Taxonomy Agent (Issue #24)** | `/nav_insights-issue24/` | `feat/error-taxonomy-issue24` | Core error taxonomy & structured errors |
 
 ### Agent Commands
 

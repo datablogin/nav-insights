@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List
 
 from pydantic import BaseModel
+from ...core.errors import CoreError
 
 from ...core.ir_base import (
     AuditFindings,
@@ -59,7 +60,13 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         cost = Decimal(str(item.get("cost", 0)))
         conversions = Decimal(str(item.get("conversions", 0)))
         if cost < 0 or conversions < 0:
-            raise ValueError("Cost and conversions must be non-negative")
+            raise CoreError(
+                code="invalid_metric",
+                category="parser.keyword",
+                message="Cost and conversions must be non-negative",
+                severity="error",
+                context={"name": name, "cost": str(cost), "conversions": str(conversions)},
+            )
 
         metrics: Dict[str, Decimal] = {
             "cost": cost,
