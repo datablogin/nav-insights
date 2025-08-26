@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List
 
 from pydantic import BaseModel
@@ -68,8 +68,9 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         if (cpa := item.get("cpa")) not in (None, "N/A"):
             try:
                 metrics["cpa"] = Decimal(str(cpa))
-            except:
-                pass  # Skip invalid CPA values
+            except (InvalidOperation, ValueError):
+                # Skip invalid CPA values (e.g., non-numeric strings)
+                pass
         
         # Build entities according to spec
         entities = [
@@ -110,8 +111,9 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         if (cpa := item.get("cpa")) not in (None, "N/A"):
             try:
                 metrics["cpa"] = Decimal(str(cpa))
-            except:
-                pass  # Skip invalid CPA values
+            except (InvalidOperation, ValueError):
+                # Skip invalid CPA values (e.g., non-numeric strings)
+                pass
         
         # Build entities according to spec
         entities = [
