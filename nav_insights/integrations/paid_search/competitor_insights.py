@@ -1,4 +1,6 @@
 from __future__ import annotations
+import hashlib
+import re
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List
@@ -45,12 +47,12 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     date_range = DateRange(start_date=start, end_date=end)
 
     findings: List[Finding] = []
-    severity = _map_priority(inp.summary.get("priority_level"))
+    global_severity = _map_priority(inp.summary.get("priority_level"))
 
     # Primary competitors → one finding per item
     for item in inp.detailed_findings.get("primary_competitors", []) or []:
         competitor = str(item.get("competitor", "unknown"))
-        competitor_clean = _sanitize_id(competitor)
+        competitor_clean = _sanitize_id(competitor, add_hash=True)
 
         # Create competitor entity
         competitor_entity = EntityRef(
@@ -78,13 +80,16 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         # Use opportunity text as description if available
         description = item.get("opportunity", "")
 
+        # Determine individual severity based on threat level or global fallback
+        individual_severity = _determine_competitor_severity(item, global_severity)
+
         findings.append(
             Finding(
                 id=f"COMPETITOR_{competitor_clean}",
                 category="other",  # fallback until competition category is added
                 summary=f"Competitor overlap: {competitor}",
                 description=description,
-                severity=severity,
+                severity=individual_severity,
                 entities=[competitor_entity],
                 metrics=metrics,
                 dims=dims,
@@ -99,7 +104,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     # Keyword gaps → one finding per gap
     for gap in inp.detailed_findings.get("keyword_gaps", []) or []:
         keyword = str(gap.get("keyword", "unknown"))
-        keyword_clean = _sanitize_id(keyword)
+        keyword_clean = _sanitize_id(keyword, add_hash=True)
         competitor_using = gap.get("competitor_using", [])
 
         # Create keyword entity
@@ -108,7 +113,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         # Create entities for competitors using this keyword
         entities = [keyword_entity]
         for comp in competitor_using:
-            comp_clean = _sanitize_id(str(comp))
+            comp_clean = _sanitize_id(str(comp), add_hash=True)
             entities.append(
                 EntityRef(type=EntityType.other, id=f"competitor:{comp_clean}", name=str(comp))
             )
@@ -135,13 +140,16 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         # Use recommendation as description
         description = gap.get("recommendation", "")
 
+        # Determine individual severity based on competition level or global fallback
+        individual_severity = _determine_keyword_gap_severity(gap, global_severity)
+
         findings.append(
             Finding(
                 id=f"KEYWORD_GAP_{keyword_clean}",
                 category="other",  # fallback until competition category is added
                 summary=summary,
                 description=description,
-                severity=severity,
+                severity=individual_severity,
                 entities=entities,
                 metrics=metrics,
                 dims=dims,
@@ -195,6 +203,45 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     return af
 
 
+def _determine_competitor_severity(item: Dict[str, Any], global_severity: Severity) -> Severity:
+    """Determine severity for competitor finding based on individual threat levels.
+
+    Uses the higher of competitive_threat_level or cost_competition_level,
+    falling back to global severity if neither is available.
+    """
+    threat_level = item.get("competitive_threat_level", "")
+    cost_level = item.get("cost_competition_level", "")
+
+    # Get severity for each level
+    threat_severity = _map_priority(threat_level) if threat_level else None
+    cost_severity = _map_priority(cost_level) if cost_level else None
+
+    # Use the higher severity, or global if neither available
+    if threat_severity and cost_severity:
+        # Compare severities: high > medium > low
+        severity_order = {Severity.low: 0, Severity.medium: 1, Severity.high: 2}
+        return max(threat_severity, cost_severity, key=lambda s: severity_order[s])
+    elif threat_severity:
+        return threat_severity
+    elif cost_severity:
+        return cost_severity
+    else:
+        return global_severity
+
+
+def _determine_keyword_gap_severity(gap: Dict[str, Any], global_severity: Severity) -> Severity:
+    """Determine severity for keyword gap finding based on competition level.
+
+    Uses the competition level if available, falling back to global severity.
+    """
+    competition_level = gap.get("competition", "")
+
+    if competition_level:
+        return _map_priority(competition_level)
+    else:
+        return global_severity
+
+
 def _map_priority(level: Any) -> Severity:
     """Map priority level to Severity enum.
 
@@ -208,8 +255,18 @@ def _map_priority(level: Any) -> Severity:
     return Severity.low
 
 
-def _sanitize_id(text: str) -> str:
-    """Sanitize text for use in entity IDs by replacing spaces and special chars."""
-    import re
+def _sanitize_id(text: str, add_hash: bool = False) -> str:
+    """Sanitize text for use in entity IDs by replacing spaces and special chars.
 
-    return re.sub(r"[^a-zA-Z0-9_-]", "_", text.strip())
+    Args:
+        text: The text to sanitize
+        add_hash: If True, adds a short hash suffix to prevent collisions
+    """
+    sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", text.strip())
+
+    if add_hash:
+        # Add a short hash suffix to prevent collisions
+        text_hash = hashlib.md5(text.encode()).hexdigest()[:8]
+        sanitized = f"{sanitized}_{text_hash}"
+
+    return sanitized

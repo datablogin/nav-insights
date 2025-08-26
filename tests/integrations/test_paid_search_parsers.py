@@ -113,7 +113,7 @@ def test_competitor_insights_comprehensive():
 
     cracker_barrel_finding = next(f for f in competitor_findings if "Cracker_Barrel" in f.id)
     assert cracker_barrel_finding.category == "other"
-    assert cracker_barrel_finding.severity == "high"  # HIGH maps to high
+    assert cracker_barrel_finding.severity == "high"  # HIGH threat/cost level maps to high
     assert cracker_barrel_finding.summary == "Competitor overlap: Cracker Barrel"
     assert (
         cracker_barrel_finding.description
@@ -124,7 +124,7 @@ def test_competitor_insights_comprehensive():
     assert len(cracker_barrel_finding.entities) == 1
     competitor_entity = cracker_barrel_finding.entities[0]
     assert competitor_entity.type == "other"
-    assert competitor_entity.id == "competitor:Cracker_Barrel"
+    assert competitor_entity.id.startswith("competitor:Cracker_Barrel_")  # Now includes hash
     assert competitor_entity.name == "Cracker Barrel"
 
     # Check metrics
@@ -148,7 +148,7 @@ def test_competitor_insights_comprehensive():
 
     family_dining_finding = next(f for f in keyword_gap_findings if "family_dining_near_me" in f.id)
     assert family_dining_finding.category == "other"
-    assert family_dining_finding.severity == "high"
+    assert family_dining_finding.severity == "high"  # HIGH competition level maps to high
     assert family_dining_finding.summary == "Gap: 'family dining near me' used by 2 competitors"
     assert family_dining_finding.description == "Add as phrase match - high opportunity"
 
@@ -156,7 +156,7 @@ def test_competitor_insights_comprehensive():
     assert len(family_dining_finding.entities) == 3
 
     keyword_entity = next(e for e in family_dining_finding.entities if e.type == "keyword")
-    assert keyword_entity.id == "kw:family_dining_near_me"
+    assert keyword_entity.id.startswith("kw:family_dining_near_me_")  # Now includes hash
     assert keyword_entity.name == "family dining near me"
 
     competitor_entities = [e for e in family_dining_finding.entities if e.type == "other"]
@@ -316,15 +316,89 @@ def test_competitor_insights_sanitize_ids():
 
     # Check that IDs are sanitized but names remain original
     comp_finding = af.findings[0]
-    assert comp_finding.id == "COMPETITOR_McDonald_s___Co_"
-    assert comp_finding.entities[0].id == "competitor:McDonald_s___Co_"
+    assert comp_finding.id.startswith("COMPETITOR_McDonald_s___Co__")  # Now includes hash
+    assert comp_finding.entities[0].id.startswith(
+        "competitor:McDonald_s___Co__"
+    )  # Now includes hash
     assert comp_finding.entities[0].name == "McDonald's & Co."  # name unchanged
 
     gap_finding = af.findings[1]
-    assert gap_finding.id == "KEYWORD_GAP_fast_food_near_me_"
+    assert gap_finding.id.startswith("KEYWORD_GAP_fast_food_near_me__")  # Now includes hash
     keyword_entity = next(e for e in gap_finding.entities if e.type == "keyword")
-    assert keyword_entity.id == "kw:fast_food_near_me_"
+    assert keyword_entity.id.startswith("kw:fast_food_near_me__")  # Now includes hash
     assert keyword_entity.name == "fast food near me!"  # name unchanged
+
+
+def test_competitor_insights_individual_severity():
+    """Test that individual findings use their own threat/competition levels for severity."""
+    sample = {
+        "analyzer": "CompetitorInsightsAnalyzer",
+        "customer_id": "severity-test",
+        "analysis_period": {"start_date": "2025-07-01T00:00:00", "end_date": "2025-07-31T00:00:00"},
+        "timestamp": "2025-08-24T12:00:00",
+        "summary": {"priority_level": "LOW"},  # Global is low
+        "detailed_findings": {
+            "primary_competitors": [
+                {
+                    "competitor": "High Threat Competitor",
+                    "competitive_threat_level": "HIGH",  # Individual high
+                    "cost_competition_level": "MEDIUM",
+                },
+                {
+                    "competitor": "Medium Threat Competitor",
+                    "competitive_threat_level": "MEDIUM",  # Individual medium
+                    "cost_competition_level": "LOW",
+                },
+                {
+                    "competitor": "No Threat Data Competitor",
+                    # No threat level data, should use global
+                },
+            ],
+            "keyword_gaps": [
+                {
+                    "keyword": "high competition keyword",
+                    "competition": "HIGH",  # Individual high
+                },
+                {
+                    "keyword": "medium competition keyword",
+                    "competition": "MEDIUM",  # Individual medium
+                },
+                {
+                    "keyword": "no competition data keyword",
+                    # No competition level, should use global
+                },
+            ],
+        },
+    }
+
+    af = parse_competitor_insights(sample)
+
+    # Should have 3 competitor findings + 3 keyword gap findings = 6 total
+    assert len(af.findings) == 6
+
+    # Check competitor findings use individual threat levels
+    competitor_findings = [f for f in af.findings if f.id.startswith("COMPETITOR_")]
+
+    high_threat_finding = next(f for f in competitor_findings if "High_Threat" in f.id)
+    assert high_threat_finding.severity == "high"  # Uses HIGH threat level
+
+    medium_threat_finding = next(f for f in competitor_findings if "Medium_Threat" in f.id)
+    assert medium_threat_finding.severity == "medium"  # Uses MEDIUM threat level
+
+    no_threat_finding = next(f for f in competitor_findings if "No_Threat" in f.id)
+    assert no_threat_finding.severity == "low"  # Uses global LOW priority
+
+    # Check keyword gap findings use individual competition levels
+    keyword_gap_findings = [f for f in af.findings if f.id.startswith("KEYWORD_GAP_")]
+
+    high_comp_finding = next(f for f in keyword_gap_findings if "high_competition" in f.id)
+    assert high_comp_finding.severity == "high"  # Uses HIGH competition level
+
+    medium_comp_finding = next(f for f in keyword_gap_findings if "medium_competition" in f.id)
+    assert medium_comp_finding.severity == "medium"  # Uses MEDIUM competition level
+
+    no_comp_finding = next(f for f in keyword_gap_findings if "no_competition" in f.id)
+    assert no_comp_finding.severity == "low"  # Uses global LOW priority
 
 
 def test_keyword_analyzer_smoke():
