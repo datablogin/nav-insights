@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List
 
@@ -12,8 +12,10 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
-    Severity,
+    EntityRef,
+    EntityType,
 )
+from .utils import map_priority_level
 
 
 class SearchTermsInput(BaseModel):
@@ -36,16 +38,36 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     customer_id = inp.customer_id or str(
         data.get("customer_id") or data.get("account_id") or "unknown"
     )
-    timestamp = inp.timestamp or str(data.get("timestamp") or datetime.utcnow().isoformat())
+    timestamp = inp.timestamp or str(
+        data.get("timestamp") or datetime.now(timezone.utc).isoformat()
+    )
 
     if inp.analysis_period:
-        start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
-        end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+        try:
+            start = datetime.fromisoformat(inp.analysis_period["start_date"]).date()
+            end = datetime.fromisoformat(inp.analysis_period["end_date"]).date()
+        except (KeyError, ValueError):
+            # Fallback to timestamp-based date if analysis_period is malformed
+            try:
+                dt = datetime.fromisoformat(timestamp)
+                start = dt.date()
+                end = dt.date()
+            except ValueError:
+                # Fallback to current date if timestamp is malformed
+                dt = datetime.now(timezone.utc)
+                start = dt.date()
+                end = dt.date()
     else:
         # derive a dummy window if not present
-        dt = datetime.fromisoformat(timestamp)
-        start = dt.date()
-        end = dt.date()
+        try:
+            dt = datetime.fromisoformat(timestamp)
+            start = dt.date()
+            end = dt.date()
+        except ValueError:
+            # Fallback to current date if timestamp is malformed
+            dt = datetime.now(timezone.utc)
+            start = dt.date()
+            end = dt.date()
 
     account = AccountMeta(account_id=customer_id)
     date_range = DateRange(start_date=start, end_date=end)
@@ -57,7 +79,13 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         term = str(item.get("term", ""))
         kw = item.get("keyword_triggered")
         summary = f"Wasteful search term '{term}' — add negative"
-        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
+        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
+
+        # Create entities as per spec
+        entities = [EntityRef(type=EntityType.search_term, id=f"st:{term}", name=term)]
+        if kw:
+            entities.append(EntityRef(type=EntityType.keyword, id=f"kw:{kw}", name=str(kw)))
+
         findings.append(
             Finding(
                 id=f"ST_WASTE_{term}",
@@ -65,6 +93,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
                 summary=summary,
                 description=item.get("recommendation"),
                 severity=severity,
+                entities=entities,
                 dims={"keyword_triggered": kw} if kw else {},
                 metrics={
                     "cost": Decimal(str(item.get("cost", 0))),
@@ -78,7 +107,15 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     for item in inp.detailed_findings.get("negative_keyword_suggestions") or []:
         neg = str(item.get("negative_keyword", ""))
         summary = f"Negative keyword suggestion '{neg}'"
-        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
+        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
+
+        # Build dims according to spec
+        dims = {}
+        if item.get("match_type"):
+            dims["match_type"] = str(item["match_type"])
+        if item.get("reason"):
+            dims["reason"] = str(item["reason"])
+
         findings.append(
             Finding(
                 id=f"ST_NEG_{neg}",
@@ -86,16 +123,23 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
                 summary=summary,
                 description=item.get("reason"),
                 severity=severity,
-                dims={"match_type": item.get("match_type")},
+                entities=[],  # No specific entities for suggestions per spec
+                dims=dims,
                 metrics={"estimated_savings_usd": Decimal(str(item.get("estimated_savings", 0)))},
             )
         )
 
     evidence = Evidence(source="paid_search_nav.search_terms")
+    try:
+        finished_at = datetime.fromisoformat(timestamp)
+    except ValueError:
+        # Fallback to current time if timestamp is malformed
+        finished_at = datetime.now(timezone.utc)
+
     prov = AnalyzerProvenance(
         name=inp.analyzer or "SearchTermsAnalyzer",
         version="unknown",
-        finished_at=datetime.fromisoformat(timestamp),
+        finished_at=finished_at,
     )
 
     af = AuditFindings(
@@ -107,12 +151,3 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         analyzers=[prov],
     )
     return af
-
-
-def _map_priority(level: Any) -> Severity:
-    s = str(level or "").lower()
-    if s in ("critical", "high"):
-        return Severity.high
-    if s == "medium":
-        return Severity.medium
-    return Severity.low
