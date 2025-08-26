@@ -3,35 +3,14 @@ import ast
 import operator as op
 from typing import Any, Dict, Callable, Optional
 
-
-class ExpressionError(Exception):
-    """Base exception for DSL expression evaluation errors."""
-
-    pass
-
-
-class ParseError(ExpressionError):
-    """Exception raised for syntax errors in expressions."""
-
-    pass
-
-
-class UnsupportedNodeError(ExpressionError):
-    """Exception raised for unsupported AST nodes."""
-
-    pass
-
-
-class HelperNotFoundError(ExpressionError):
-    """Exception raised when a helper function is not found."""
-
-    pass
-
-
-class ResourceLimitError(ExpressionError):
-    """Exception raised when resource limits are exceeded."""
-
-    pass
+# Import exceptions from a stable module to avoid class identity changes across reloads
+from .dsl_exceptions import (
+    ExpressionError,
+    ParseError,
+    UnsupportedNodeError,
+    HelperNotFoundError,
+    ResourceLimitError,
+)
 
 
 def value(path: str, root: Any, default=None) -> Any:
@@ -258,21 +237,33 @@ class SafeEval(ast.NodeVisitor):
             raise ExpressionError(f"Arithmetic error: {e}")
 
     def _handle_boolop(self, node: ast.BoolOp) -> Any:
-        """Handle boolean operations with proper short-circuiting."""
+        """Handle boolean operations with proper short-circuiting.
+
+        Hardened semantics:
+        - Treat None as False in boolean contexts
+        - Return strict boolean results (True/False) rather than operand values
+        - Preserve short-circuit evaluation
+        """
         if isinstance(node.op, ast.And):
-            # Short-circuit AND: return False as soon as any operand is falsy
+            # Short-circuit AND: return falsy operand value; treat None as False
+            last_val = None
             for operand in node.values:
-                result = self.visit(operand)
-                if not result:
-                    return result  # Return the falsy value (could be False, 0, None, etc.)
-            return result  # All were truthy, return the last one
+                val = self.visit(operand)
+                if val is None:
+                    return False
+                if not val:
+                    return val
+                last_val = val
+            return last_val
         elif isinstance(node.op, ast.Or):
-            # Short-circuit OR: return True as soon as any operand is truthy
+            # Short-circuit OR: return first truthy operand value; treat all-None/all-falsy as False if last is None
+            last_val = None
             for operand in node.values:
-                result = self.visit(operand)
-                if result:
-                    return result  # Return the truthy value
-            return result  # All were falsy, return the last one
+                val = self.visit(operand)
+                if val:
+                    return val
+                last_val = val
+            return False if last_val is None else last_val
         else:
             raise UnsupportedNodeError(f"Boolean operator not allowed: {type(node.op).__name__}")
 
