@@ -66,6 +66,34 @@ from pydantic import BaseModel
 
         assert len(checker.violations) == 0
 
+    def test_false_positive_prevention(self):
+        """Test that imports with similar names don't trigger false positives."""
+        # These should NOT trigger violations
+        false_positive_sources = [
+            "import some_domains_util",  # Contains 'domains' but not at start
+            "from my_integrations_helper import func",  # Contains 'integrations' but not at start
+            "from nav_insights.core.domains_helper import x",  # In core, just has 'domains' in name
+        ]
+
+        for source in false_positive_sources:
+            tree = ast.parse(source)
+            checker = ImportViolationChecker("test.py")
+            checker.visit(tree)
+            assert len(checker.violations) == 0, f"False positive for: {source}"
+
+    def test_relative_import_violations(self):
+        """Test that relative imports to forbidden modules are caught."""
+        violation_sources = [
+            "from ..domains import something",
+            "from .integrations import helper",
+        ]
+
+        for source in violation_sources:
+            tree = ast.parse(source)
+            checker = ImportViolationChecker("test.py")
+            checker.visit(tree)
+            assert len(checker.violations) == 1, f"Should catch violation for: {source}"
+
 
 class TestCoreImportChecker:
     """Integration tests for the full core import checker."""
@@ -94,3 +122,50 @@ class TestCoreImportChecker:
             assert len(violations) == 1
             assert "bad_module.py" in violations[0][0]
             assert "Forbidden import" in violations[0][2]
+
+    def test_missing_core_path(self):
+        """Test behavior when core path doesn't exist."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            # Don't create nav_insights/core directory
+
+            violations = check_core_imports(tmp_path)
+            # Should return empty violations list, not crash
+            assert violations == []
+
+    def test_syntax_error_handling(self):
+        """Test that syntax errors are properly handled and reported."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            core_path = tmp_path / "nav_insights" / "core"
+            core_path.mkdir(parents=True)
+
+            # Create a file with syntax error
+            syntax_error_file = core_path / "broken_syntax.py"
+            syntax_error_file.write_text(
+                "import nav_insights.domains.paid_search\nthis is not valid python syntax !!!"
+            )
+
+            violations = check_core_imports(tmp_path)
+
+            assert len(violations) == 1
+            assert "broken_syntax.py" in violations[0][0]
+            assert "Syntax error" in violations[0][2]
+
+    def test_file_processing_error_handling(self):
+        """Test handling of file processing errors."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            core_path = tmp_path / "nav_insights" / "core"
+            core_path.mkdir(parents=True)
+
+            # Create an empty directory that will cause an error when treated as file
+            problem_dir = core_path / "not_a_file.py"
+            problem_dir.mkdir()
+
+            violations = check_core_imports(tmp_path)
+
+            # Should handle the error gracefully
+            assert len(violations) == 1
+            assert "not_a_file.py" in violations[0][0]
+            assert "Error processing file" in violations[0][2]

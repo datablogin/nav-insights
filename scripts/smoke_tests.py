@@ -55,9 +55,17 @@ def test_search_domain_pack() -> bool:
             / "default.yaml"
         )
         if rules_path.exists():
-            from nav_insights.core.rules import _load_rules_cached
+            # Test that rules can be evaluated (which also validates loading)
+            from nav_insights.core.rules import evaluate_rules
 
-            _load_rules_cached(str(rules_path))
+            # Simple test IR to validate rules loading
+            test_rules_ir = {
+                "schema_version": "1.0.0",
+                "findings": [],
+                "totals": {},
+                "aggregates": {},
+            }
+            evaluate_rules(test_rules_ir, str(rules_path))
 
         print("✅ Search domain pack smoke test passed")
         return True

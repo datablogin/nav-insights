@@ -27,10 +27,25 @@ class ImportViolationChecker(ast.NodeVisitor):
 
     def _is_forbidden_import(self, module_name: str) -> bool:
         """Check if a module name matches forbidden patterns."""
-        return any(
-            module_name.startswith(pattern) or f".{pattern.split('.')[-1]}" in module_name
+        # Check absolute imports like nav_insights.domains.* or nav_insights.integrations.*
+        if any(
+            module_name.startswith(pattern)
             for pattern in self.forbidden_patterns
-        )
+            if not pattern.startswith(".")
+        ):
+            return True
+
+        # Check relative imports like .domains, ..domains, .integrations, ..integrations
+        for pattern in ["domains", "integrations"]:
+            if (
+                module_name == f".{pattern}"
+                or module_name.startswith(f".{pattern}.")
+                or module_name == f"..{pattern}"
+                or module_name.startswith(f"..{pattern}.")
+            ):
+                return True
+
+        return False
 
     def visit_Import(self, node: ast.Import) -> None:
         """Check import statements."""
@@ -41,11 +56,22 @@ class ImportViolationChecker(ast.NodeVisitor):
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         """Check from...import statements."""
-        if node.module and self._is_forbidden_import(node.module):
-            names = ", ".join(alias.name for alias in node.names)
-            self.violations.append(
-                (node.lineno, f"Forbidden import: from {node.module} import {names}")
-            )
+        if node.module:
+            # Reconstruct the full module path including relative import dots
+            full_module_name = node.module
+            if node.level > 0:
+                full_module_name = "." * node.level + node.module
+
+            if self._is_forbidden_import(full_module_name):
+                names = ", ".join(alias.name for alias in node.names)
+                # Show the full import as it appears in the source
+                import_prefix = "." * node.level if node.level > 0 else ""
+                self.violations.append(
+                    (
+                        node.lineno,
+                        f"Forbidden import: from {import_prefix}{node.module} import {names}",
+                    )
+                )
         self.generic_visit(node)
 
 

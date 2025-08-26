@@ -80,6 +80,8 @@ jobs:
 
   guardrails:
     runs-on: ubuntu-latest
+    # Note: Only runs on Python 3.11 since static analysis and smoke tests 
+    # are version-agnostic and don't require multi-version testing
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
