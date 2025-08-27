@@ -14,6 +14,7 @@ from ...core.ir_base import (
     Finding,
     Severity,
 )
+from ...core.utils import map_priority_level
 
 
 class CompetitorInsightsInput(BaseModel):
@@ -44,7 +45,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     for item in inp.detailed_findings.get("primary_competitors", []) or []:
         competitor = str(item.get("competitor", "unknown"))
         summary = f"Competitor overlap: {competitor}"
-        severity = _map_priority(inp.summary.get("priority_level"))
+        severity = map_priority_level(inp.summary.get("priority_level"))
         findings.append(
             Finding(
                 id=f"COMPETITOR_{competitor}",
@@ -82,10 +83,3 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     return af
 
 
-def _map_priority(level: Any) -> Severity:
-    s = str(level or "").lower()
-    if s in ("critical", "high"):  # map CRITICAL→high
-        return Severity.high
-    if s == "medium":
-        return Severity.medium
-    return Severity.low

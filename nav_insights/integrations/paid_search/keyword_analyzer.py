@@ -14,6 +14,7 @@ from ...core.ir_base import (
     Finding,
     Severity,
 )
+from ...core.utils import map_priority_level
 
 
 class KeywordAnalyzerInput(BaseModel):
@@ -46,7 +47,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         match_type = str(item.get("match_type", ""))
         recommendation = item.get("recommendation")
         summary = f"Underperforming keyword '{name}' ({match_type})"
-        severity = _map_priority(inp.summary.get("priority_level"))
+        severity = map_priority_level(inp.summary.get("priority_level"))
         metrics: Dict[str, Decimal] = {
             "cost": Decimal(str(item.get("cost", 0))),
             "conversions": Decimal(str(item.get("conversions", 0))),
@@ -71,7 +72,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         match_type = str(item.get("match_type", ""))
         recommendation = item.get("recommendation")
         summary = f"Top performer '{name}' ({match_type})"
-        severity = _map_priority(inp.summary.get("priority_level"))
+        severity = map_priority_level(inp.summary.get("priority_level"))
         metrics: Dict[str, Decimal] = {
             "cost": Decimal(str(item.get("cost", 0))),
             "conversions": Decimal(str(item.get("conversions", 0))),
@@ -107,11 +108,3 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
     )
     return af
 
-
-def _map_priority(level: Any) -> Severity:
-    s = str(level or "").lower()
-    if s in ("critical", "high"):
-        return Severity.high
-    if s == "medium":
-        return Severity.medium
-    return Severity.low

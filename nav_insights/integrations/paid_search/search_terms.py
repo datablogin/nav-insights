@@ -14,6 +14,7 @@ from ...core.ir_base import (
     Finding,
     Severity,
 )
+from ...core.utils import map_priority_level
 
 
 class SearchTermsInput(BaseModel):
@@ -57,7 +58,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         term = str(item.get("term", ""))
         kw = item.get("keyword_triggered")
         summary = f"Wasteful search term '{term}' — add negative"
-        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
+        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
         findings.append(
             Finding(
                 id=f"ST_WASTE_{term}",
@@ -78,7 +79,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     for item in inp.detailed_findings.get("negative_keyword_suggestions") or []:
         neg = str(item.get("negative_keyword", ""))
         summary = f"Negative keyword suggestion '{neg}'"
-        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
+        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
         findings.append(
             Finding(
                 id=f"ST_NEG_{neg}",
@@ -109,10 +110,3 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     return af
 
 
-def _map_priority(level: Any) -> Severity:
-    s = str(level or "").lower()
-    if s in ("critical", "high"):
-        return Severity.high
-    if s == "medium":
-        return Severity.medium
-    return Severity.low
