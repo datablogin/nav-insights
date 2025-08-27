@@ -199,4 +199,3 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         index=index,
     )
     return af
-
