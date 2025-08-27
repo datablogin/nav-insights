@@ -12,7 +12,6 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
-    Severity,
 )
 from ...core.utils import map_priority_level
 
@@ -81,5 +80,3 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         analyzers=[prov],
     )
     return af
-
-

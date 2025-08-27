@@ -12,7 +12,6 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
-    Severity,
 )
 from ...core.utils import map_priority_level
 
@@ -108,5 +107,3 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         analyzers=[prov],
     )
     return af
-
-
