@@ -95,3 +95,5 @@ jobs:
         run: python scripts/check_imports.py
       - name: Run domain pack smoke tests
         run: python scripts/smoke_tests.py
+      - name: Validate analyzer fixtures
+        run: python scripts/validate_fixtures.py
