@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any, Dict, Optional, Type
+from enum import Enum
 
 from . import dsl_exceptions as dslx
 
@@ -59,6 +60,68 @@ _DSL_EXCEPTION_MAP: Dict[Type[BaseException], Dict[str, str]] = {
 }
 
 
+class ErrorCode(str, Enum):
+    validation_error = "validation_error"
+    negative_metric = "negative_metric"
+    parser_error = "parser_error"
+    unhandled_exception = "unhandled_exception"
+
+
+class ValidationError(CoreError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        field_name: Optional[str] = None,
+        field_value: Any = None,
+        context: Optional[Dict[str, Any]] = None,
+        original_error: Optional[BaseException] = None,
+    ) -> None:
+        ctx = context.copy() if context else {}
+        if field_name is not None:
+            ctx["field_name"] = field_name
+        if field_value is not None:
+            ctx["field_value"] = field_value
+        super().__init__(
+            code=ErrorCode.validation_error.value,
+            category="core.validation",
+            message=message,
+            severity="error",
+            context=ctx,
+            cause=original_error,
+        )
+
+
+class NegativeMetricError(CoreError):
+    def __init__(
+        self,
+        *,
+        field_name: str,
+        field_value: Any,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        ctx = context.copy() if context else {}
+        ctx.update({"field_name": field_name, "field_value": str(field_value)})
+        super().__init__(
+            code=ErrorCode.negative_metric.value,
+            category="core.validation",
+            message=f"Negative value for metric '{field_name}': {field_value}",
+            severity="error",
+            context=ctx,
+        )
+
+
+class ParserError(CoreError):
+    def __init__(self, message: str, *, context: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(
+            code=ErrorCode.parser_error.value,
+            category="parser",
+            message=message,
+            severity="error",
+            context=context or {},
+        )
+
+
 def to_core_error(exc: BaseException, *, default_category: str = "unknown") -> CoreError:
     """Convert an arbitrary exception to a CoreError with best-effort mapping.
 
@@ -76,10 +139,14 @@ def to_core_error(exc: BaseException, *, default_category: str = "unknown") -> C
                 cause=exc,
             )
     return CoreError(
-        code="unhandled_exception",
+        code=ErrorCode.unhandled_exception.value,
         category=default_category,
         message=str(exc),
         severity="error",
         context={},
         cause=exc,
     )
+
+
+# Backwards-compatible helper
+wrap_exception = to_core_error

@@ -18,7 +18,7 @@ from ...core.ir_base import (
     EntityRef,
     Totals,
 )
-from .utils import map_priority_level
+from ...core.utils import map_priority_level
 
 
 class KeywordAnalyzerInput(BaseModel):
@@ -80,7 +80,6 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
                 severity="error",
                 context={"name": name, "cost": str(cost), "conversions": str(conversions)},
             )
-
         metrics: Dict[str, Decimal] = {
             "cost": cost,
             "conversions": conversions,
@@ -135,7 +134,6 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
                 severity="error",
                 context={"name": name, "cost": str(cost), "conversions": str(conversions)},
             )
-
         metrics: Dict[str, Decimal] = {
             "cost": cost,
             "conversions": conversions,
@@ -202,11 +200,3 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
     )
     return af
 
-
-def _map_priority(level: Any) -> Severity:
-    s = str(level or "").lower()
-    if s in ("critical", "high"):
-        return Severity.high
-    if s == "medium":
-        return Severity.medium
-    return Severity.low
