@@ -1,0 +1,204 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-08-25T10:00:00Z",
+  "account": {
+    "account_id": "000-000-0001",
+    "account_name": "Small Test Account"
+  },
+  "date_range": {
+    "start_date": "2025-08-01", 
+    "end_date": "2025-08-07"
+  },
+  "totals": {
+    "spend": {
+      "amount": "100.0",
+      "currency": "USD"
+    },
+    "clicks": 50,
+    "impressions": 1000,
+    "conversions": "2.0",
+    "revenue": {
+      "amount": "200.0", 
+      "currency": "USD"
+    },
+    "spend_usd": "100.0",
+    "revenue_usd": "200.0"
+  },
+  "aggregates": {
+    "match_type": {
+      "broad_pct": 1.0,
+      "phrase_pct": 0.0,
+      "exact_pct": 0.0
+    },
+    "quality_score": {
+      "p25": 3.0,
+      "median": 3.0,
+      "p75": 3.0
+    },
+    "devices": {
+      "mobile": 1.0,
+      "desktop": 0.0,
+      "tablet": 0.0
+    }
+  },
+  "pmax": {},
+  "conflicts": {
+    "negatives_blocking_converters_count": 1,
+    "blocked_conversions_total": 0.5,
+    "revenue_impact_usd": "5.0",
+    "overly_broad_negatives_count": 1
+  },
+  "geo": {},
+  "findings": [
+    {
+      "id": "NEG_CONFLICT_BROAD_001",
+      "category": "conflicts",
+      "summary": "Overly broad negative 'shoes' affecting 1 term with minimal impact",
+      "description": "The broad negative keyword 'shoes' is blocking 1 search term but impact is minimal ($5.00 revenue). Monitor for data significance before taking action.",
+      "severity": "low",
+      "confidence": 0.45,
+      "entities": [
+        {
+          "type": "keyword", 
+          "id": "neg:shoes",
+          "name": "shoes",
+          "extra": {"match_type": "BROAD"}
+        },
+        {
+          "type": "campaign",
+          "id": "camp:Test Campaign",
+          "name": "Test Campaign"
+        }
+      ],
+      "dims": {
+        "match_type": "BROAD",
+        "conflict_type": "overly_broad"
+      },
+      "metrics": {
+        "affected_terms_count": 1.0,
+        "total_revenue_impact_usd": 5.0
+      },
+      "evidence": [
+        {
+          "source": "paid_search_nav.negative_conflicts",
+          "query": "overly_broad_negatives AND low_volume_account",
+          "rows": 1,
+          "sample": [
+            {
+              "negative_keyword": "shoes",
+              "blocked_term": "running shoes",
+              "revenue_impact": 5.0
+            }
+          ],
+          "entities": [
+            {
+              "type": "campaign",
+              "id": "camp:Test Campaign", 
+              "name": "Test Campaign"
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "name": "negative_conflicts",
+        "version": "1.0.0",
+        "started_at": "2025-08-25T09:45:00Z",
+        "finished_at": "2025-08-25T09:45:15Z"
+      }
+    },
+    {
+      "id": "NEG_CONFLICT_BLOCK_001",
+      "category": "conflicts",
+      "summary": "Negative keyword 'bad' blocking converting term with minimal impact",
+      "description": "The exact negative keyword 'bad' is blocking a search term but with minimal conversion impact (0.5 conversions). Low data volume makes assessment uncertain.",
+      "severity": "low",
+      "confidence": 0.3,
+      "entities": [
+        {
+          "type": "keyword",
+          "id": "neg:bad",
+          "name": "bad",
+          "extra": {"match_type": "EXACT"}
+        },
+        {
+          "type": "search_term",
+          "id": "st:not bad shoes",
+          "name": "not bad shoes"
+        },
+        {
+          "type": "campaign",
+          "id": "camp:Test Campaign",
+          "name": "Test Campaign"
+        }
+      ],
+      "dims": {
+        "match_type": "EXACT",
+        "conflict_type": "blocking"
+      },
+      "metrics": {
+        "conversions_lost": 0.5,
+        "revenue_lost_usd": 0.0,
+        "clicks_blocked": 2.0
+      },
+      "evidence": [
+        {
+          "source": "paid_search_nav.negative_conflicts",
+          "query": "negative_keyword='bad' AND blocked_terms AND low_volume",
+          "rows": 1,
+          "entities": [
+            {
+              "type": "campaign",
+              "id": "camp:Test Campaign",
+              "name": "Test Campaign"
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "name": "negative_conflicts",
+        "version": "1.0.0",
+        "started_at": "2025-08-25T09:45:00Z",
+        "finished_at": "2025-08-25T09:45:15Z"
+      }
+    }
+  ],
+  "index": {
+    "findings_by_category": {
+      "conflicts": 2
+    },
+    "findings_by_severity": {
+      "low": 2
+    },
+    "empty_categories": [
+      "keywords",
+      "quality",
+      "budget",
+      "tracking"
+    ]
+  },
+  "data_sources": [
+    {
+      "source": "paid_search_nav.negative_conflicts",
+      "query": "SELECT * FROM negative_conflicts_analysis WHERE account_id = '000-000-0001'",
+      "rows": 1,
+      "checksum": "edge123case456",
+      "entities": []
+    }
+  ],
+  "analyzers": [
+    {
+      "name": "negative_conflicts",
+      "version": "1.0.0", 
+      "git_sha": "a1b2c3d4",
+      "started_at": "2025-08-25T09:45:00Z",
+      "finished_at": "2025-08-25T09:45:15Z"
+    }
+  ],
+  "completeness": {
+    "tracking_ok": true,
+    "has_negative_conflicts_data": true,
+    "has_conversion_data": false,
+    "low_volume_account": true,
+    "insufficient_data_warning": true
+  }
+}

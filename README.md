@@ -69,6 +69,23 @@ pytest
 
 The example loads a small **Paid Search IR** and emits a few **Actions** using the starter ruleset.
 
+### Validation CLI
+
+Use the `nav-insights` CLI to validate analyzer payloads against JSON schemas:
+
+```bash
+# List available analyzer types
+nav-insights validate --list-types
+
+# Validate a file
+nav-insights validate --type paid_search.keyword_analyzer --input data.json
+
+# Validate from stdin  
+cat data.json | nav-insights validate --type paid_search.search_terms --input -
+```
+
+See [docs/schemas/README.md](docs/schemas/README.md) for detailed usage.
+
 ---
 
 ## Core data models
@@ -227,10 +244,39 @@ ISSUES.md
 
 ---
 
+## Analyzer → IR Coverage Status
+
+This table tracks the mapping status of PaidSearchNav analyzers to the Core IR:
+
+| Analyzer | Status | IR Mapping | Fixtures | Tests | Issue |
+|----------|--------|------------|----------|-------|--------|
+| **negative_conflicts** | ✅ Complete | [spec](docs/mappings/paid_search/negative_conflicts_to_ir.md) | 2 fixtures | 11 tests | [#39](https://github.com/datablogin/nav-insights/issues/39) |
+| **search_terms** | 📝 Draft | [spec](docs/mappings/paid_search/search_terms_to_ir.md) | - | - | - |
+| **keyword_analyzer** | 📝 Draft | [spec](docs/mappings/paid_search/keyword_analyzer_to_ir.md) | - | - | - |
+| **competitor_insights** | 📝 Draft | [spec](docs/mappings/paid_search/competitor_insights_to_ir.md) | - | - | - |
+| geo_performance | 🔲 Pending | - | - | - | - |
+| quality_score | 🔲 Pending | - | - | - | - |
+| bid_efficiency | 🔲 Pending | - | - | - | - |
+| match_type_analysis | 🔲 Pending | - | - | - | - |
+| search_impression_share | 🔲 Pending | - | - | - | - |
+| *...additional analyzers...* | 🔲 Pending | - | - | - | - |
+
+**Legend:**
+- ✅ Complete: Mapping spec, fixtures, and tests implemented
+- 📝 Draft: Mapping spec exists, needs fixtures/tests  
+- 🔲 Pending: Not yet started
+
+**Coverage Stats:**
+- Total analyzers: 20+ (from PaidSearchNav)
+- Mapped: 1 (5%)
+- Target: 16+ (80% coverage for P2 milestone)
+
+---
+
 ## Roadmap (highlights)
 
 * **P1**: Core IR/Actions/Insight, DSL, rules engine, writer with schema enforcement
-* **P2**: PaidSearch rules (≥12), dataset builder integration, evaluation harness
+* **P2**: PaidSearch rules (≥12), dataset builder integration, evaluation harness, analyzer→IR coverage ≥80%
 * **P3**: Dedupe/priority policy, telemetry, optional FastAPI service wrapper
 
 See `ISSUES.md` for the full list.

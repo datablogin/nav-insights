@@ -8,13 +8,28 @@ dependencies = [
     "pydantic>=2.6",
     "jinja2>=3.1",
     "pyyaml>=6.0",
+    "jsonschema>=4.0.0",
 ]
+
+[project.scripts]
+nav-insights = "nav_insights.cli:main"
 
 [project.optional-dependencies]
 service = [
     "fastapi>=0.112",
     "uvicorn[standard]>=0.30",
 ]
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nav_insights"]
 
 [tool.ruff]
 line-length = 100

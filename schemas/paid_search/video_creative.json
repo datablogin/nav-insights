@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "JSON schema for VideoCreativeInput payload validation",
+  "properties": {
+    "analysis_period": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Analysis Period",
+      "type": "object"
+    },
+    "analyzer": {
+      "title": "Analyzer",
+      "type": "string"
+    },
+    "customer_id": {
+      "title": "Customer Id",
+      "type": "string"
+    },
+    "detailed_findings": {
+      "additionalProperties": true,
+      "title": "Detailed Findings",
+      "type": "object"
+    },
+    "summary": {
+      "additionalProperties": true,
+      "title": "Summary",
+      "type": "object"
+    },
+    "timestamp": {
+      "title": "Timestamp",
+      "type": "string"
+    }
+  },
+  "required": [
+    "analyzer",
+    "customer_id",
+    "analysis_period",
+    "timestamp",
+    "summary",
+    "detailed_findings"
+  ],
+  "title": "VideoCreativeInput Schema",
+  "type": "object"
+}

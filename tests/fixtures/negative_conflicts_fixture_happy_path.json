@@ -1,0 +1,254 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-08-25T10:00:00Z",
+  "account": {
+    "account_id": "456-789-0123",
+    "account_name": "SportStore Plus"
+  },
+  "date_range": {
+    "start_date": "2025-08-01",
+    "end_date": "2025-08-31"
+  },
+  "totals": {
+    "spend": {
+      "amount": "25000.0",
+      "currency": "USD"
+    },
+    "clicks": 45000,
+    "impressions": 1200000,
+    "conversions": "850.0",
+    "revenue": {
+      "amount": "170000.0",
+      "currency": "USD"
+    },
+    "spend_usd": "25000.0",
+    "revenue_usd": "170000.0"
+  },
+  "aggregates": {
+    "match_type": {
+      "broad_pct": 0.45,
+      "phrase_pct": 0.35,
+      "exact_pct": 0.20
+    },
+    "quality_score": {
+      "p25": 5.2,
+      "median": 7.1,
+      "p75": 8.9
+    },
+    "devices": {
+      "mobile": 0.58,
+      "desktop": 0.35,
+      "tablet": 0.07
+    }
+  },
+  "pmax": {},
+  "conflicts": {
+    "negatives_blocking_converters_count": 5,
+    "blocked_conversions_total": 20,
+    "revenue_impact_usd": "5800.0",
+    "overly_broad_negatives_count": 3
+  },
+  "geo": {},
+  "findings": [
+    {
+      "id": "NEG_CONFLICT_BLOCK_001",
+      "category": "conflicts",
+      "summary": "Negative keyword 'free' blocking converting term 'free shipping'",
+      "description": "The broad negative keyword 'free' is blocking the profitable search term 'free shipping' which has generated 12 conversions worth $2,400. Consider changing 'free' to phrase match or adding an exception for shipping-related terms.",
+      "severity": "high",
+      "confidence": 0.85,
+      "entities": [
+        {
+          "type": "keyword",
+          "id": "neg:free",
+          "name": "free",
+          "extra": {"match_type": "BROAD"}
+        },
+        {
+          "type": "search_term", 
+          "id": "st:free shipping",
+          "name": "free shipping"
+        },
+        {
+          "type": "campaign",
+          "id": "camp:Brand Campaign",
+          "name": "Brand Campaign"
+        },
+        {
+          "type": "ad_group",
+          "id": "ag:Core Products",
+          "name": "Core Products"
+        }
+      ],
+      "dims": {
+        "match_type": "BROAD",
+        "conflict_type": "blocking"
+      },
+      "metrics": {
+        "conversions_lost": 12.0,
+        "revenue_lost_usd": 2400.0,
+        "clicks_blocked": 45.0
+      },
+      "evidence": [
+        {
+          "source": "paid_search_nav.negative_conflicts",
+          "query": "negative_keyword='free' AND blocked_terms",
+          "rows": 1,
+          "entities": [
+            {
+              "type": "campaign",
+              "id": "camp:Brand Campaign", 
+              "name": "Brand Campaign"
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "name": "negative_conflicts",
+        "version": "1.0.0",
+        "started_at": "2025-08-25T09:45:00Z",
+        "finished_at": "2025-08-25T09:47:30Z"
+      }
+    },
+    {
+      "id": "NEG_CONFLICT_BLOCK_002", 
+      "category": "conflicts",
+      "summary": "Negative keyword 'cheap' blocking converting term 'cheap running shoes'",
+      "description": "The exact negative keyword 'cheap' is blocking valuable search terms like 'cheap running shoes' which converts at 3.2%. Consider using phrase match instead.",
+      "severity": "medium",
+      "confidence": 0.78,
+      "entities": [
+        {
+          "type": "keyword",
+          "id": "neg:cheap",
+          "name": "cheap",
+          "extra": {"match_type": "EXACT"}
+        },
+        {
+          "type": "search_term",
+          "id": "st:cheap running shoes", 
+          "name": "cheap running shoes"
+        },
+        {
+          "type": "campaign",
+          "id": "camp:Running Gear",
+          "name": "Running Gear"
+        },
+        {
+          "type": "ad_group",
+          "id": "ag:Shoes",
+          "name": "Shoes"
+        }
+      ],
+      "dims": {
+        "match_type": "EXACT",
+        "conflict_type": "blocking"
+      },
+      "metrics": {
+        "conversions_lost": 8.0,
+        "revenue_lost_usd": 1600.0,
+        "clicks_blocked": 32.0
+      },
+      "evidence": [
+        {
+          "source": "paid_search_nav.negative_conflicts",
+          "query": "negative_keyword='cheap' AND blocked_terms",
+          "rows": 1,
+          "entities": [
+            {
+              "type": "campaign",
+              "id": "camp:Running Gear",
+              "name": "Running Gear"
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "name": "negative_conflicts",
+        "version": "1.0.0",
+        "started_at": "2025-08-25T09:45:00Z",
+        "finished_at": "2025-08-25T09:47:30Z"
+      }
+    },
+    {
+      "id": "NEG_CONFLICT_BROAD_001",
+      "category": "conflicts", 
+      "summary": "Overly broad negative 'discount' affecting 15 profitable terms",
+      "description": "The broad negative keyword 'discount' is blocking 15 search terms with a total revenue impact of $1,800. Consider using more specific negative keywords or phrase match.",
+      "severity": "medium",
+      "confidence": 0.72,
+      "entities": [
+        {
+          "type": "keyword",
+          "id": "neg:discount",
+          "name": "discount",
+          "extra": {"match_type": "BROAD"}
+        },
+        {
+          "type": "campaign",
+          "id": "camp:Seasonal Promotions",
+          "name": "Seasonal Promotions"
+        }
+      ],
+      "dims": {
+        "match_type": "BROAD",
+        "conflict_type": "overly_broad"
+      },
+      "metrics": {
+        "affected_terms_count": 15.0,
+        "total_revenue_impact_usd": 1800.0
+      },
+      "evidence": [
+        {
+          "source": "paid_search_nav.negative_conflicts",
+          "query": "overly_broad_negatives AND impact_analysis",
+          "rows": 15,
+          "entities": [
+            {
+              "type": "campaign", 
+              "id": "camp:Seasonal Promotions",
+              "name": "Seasonal Promotions"
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "name": "negative_conflicts",
+        "version": "1.0.0",
+        "started_at": "2025-08-25T09:45:00Z", 
+        "finished_at": "2025-08-25T09:47:30Z"
+      }
+    }
+  ],
+  "index": {
+    "findings_by_category": {
+      "conflicts": 3
+    },
+    "findings_by_severity": {
+      "high": 1,
+      "medium": 2
+    }
+  },
+  "data_sources": [
+    {
+      "source": "paid_search_nav.negative_conflicts",
+      "query": "SELECT * FROM negative_conflicts_analysis WHERE account_id = '456-789-0123'",
+      "rows": 17,
+      "checksum": "abc123def456"
+    }
+  ],
+  "analyzers": [
+    {
+      "name": "negative_conflicts", 
+      "version": "1.0.0",
+      "git_sha": "a1b2c3d4",
+      "started_at": "2025-08-25T09:45:00Z",
+      "finished_at": "2025-08-25T09:47:30Z"
+    }
+  ],
+  "completeness": {
+    "tracking_ok": true,
+    "has_negative_conflicts_data": true,
+    "has_conversion_data": true
+  }
+}

@@ -55,16 +55,78 @@ Edge cases
 Example IR finding
 ```json path=null start=null
 {
+  "id": "keyword_analyzer_cotton_patch_001_under_1_food_delivery",
   "category": "keywords",
   "summary": "Underperforming keyword 'food delivery' (BROAD)",
-  "description": "Pause - Zero conversions after $800+ spend",
+  "description": "Pause - Zero conversions after $892.45 spend",
   "severity": "high",
   "entities": [
     {"type": "keyword", "id": "kw:food delivery", "name": "food delivery"},
     {"type": "campaign", "id": "cmp:Cotton Patch - Generic Terms", "name": "Cotton Patch - Generic Terms"}
   ],
-  "dims": {"match_type": "BROAD"},
-  "metrics": {"cost": 892.45, "conversions": 0}
+  "dims": {"match_type": "BROAD", "campaign": "Cotton Patch - Generic Terms"},
+  "metrics": {"cost": 892.45, "conversions": 0},
+  "evidence": {"source": "paid_search_nav.keyword", "rows": null, "entities": []}
+}
+```
+
+Complete example AuditFindings output
+```json path=null start=null
+{
+  "account": {"account_id": "cotton_patch_001"},
+  "date_range": {
+    "start_date": "2025-08-01",
+    "end_date": "2025-08-24"
+  },
+  "totals": {},
+  "aggregates": {
+    "keywords": {
+      "total_analyzed": 245,
+      "recommendations_count": 18,
+      "potential_monthly_savings": 3450.75,
+      "priority_level": "HIGH"
+    }
+  },
+  "findings": [
+    {
+      "id": "keyword_analyzer_cotton_patch_001_under_1_restaurant_near_me",
+      "category": "keywords",
+      "summary": "Underperforming keyword 'restaurant near me' (BROAD)",
+      "description": "Pause - Zero conversions after $892.45 spend",
+      "severity": "high",
+      "entities": [
+        {"type": "keyword", "id": "kw:restaurant near me", "name": "restaurant near me"},
+        {"type": "campaign", "id": "cmp:Cotton Patch - Generic Terms", "name": "Cotton Patch - Generic Terms"}
+      ],
+      "dims": {"match_type": "BROAD", "campaign": "Cotton Patch - Generic Terms"},
+      "metrics": {"cost": 892.45, "conversions": 0},
+      "evidence": {"source": "paid_search_nav.keyword"}
+    },
+    {
+      "id": "keyword_analyzer_cotton_patch_001_top_1_cotton_patch_cafe",
+      "category": "keywords",
+      "summary": "Top performing keyword 'cotton patch cafe menu' (EXACT)",
+      "description": "Increase budget allocation - Strong ROI performance",
+      "severity": "low",
+      "entities": [
+        {"type": "keyword", "id": "kw:cotton patch cafe menu", "name": "cotton patch cafe menu"},
+        {"type": "campaign", "id": "cmp:Cotton Patch - Brand", "name": "Cotton Patch - Brand"}
+      ],
+      "dims": {"match_type": "EXACT", "campaign": "Cotton Patch - Brand"},
+      "metrics": {"cost": 456.78, "conversions": 28, "cpa": 16.31},
+      "evidence": {"source": "paid_search_nav.keyword"}
+    }
+  ],
+  "data_sources": [
+    {"source": "paid_search_nav.keyword"}
+  ],
+  "analyzers": [
+    {
+      "name": "KeywordAnalyzer",
+      "version": "1.0.0",
+      "finished_at": "2025-08-24T18:07:11"
+    }
+  ]
 }
 ```
 
@@ -74,5 +136,10 @@ Acceptance criteria
 - At least 1 underperformer and 1 top performer mapped in tests
 
 Notes
-- Consider normalizing match_type values and/or adding a dims.match_type_category for analysis.
+- Match types are normalized to uppercase (BROAD, PHRASE, EXACT)
+- Empty/null campaign names default to "Unknown Campaign"
+- Empty/null keyword names default to "unknown" 
+- CPA values of "N/A" are omitted from metrics
+- Top performing keywords typically get low severity since they're performing well
+- Finding IDs include customer_id, type (under/top), counter, and sanitized keyword name
 

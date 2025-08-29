@@ -237,12 +237,13 @@ class SafeEval(ast.NodeVisitor):
             raise ExpressionError(f"Arithmetic error: {e}")
 
     def _handle_boolop(self, node: ast.BoolOp) -> Any:
-        """Handle boolean operations with proper short-circuiting.
+        """Handle boolean operations with proper short-circuiting and None semantics.
 
-        Hardened semantics:
+        Rules:
         - Treat None as False in boolean contexts
-        - Return strict boolean results (True/False) rather than operand values
-        - Preserve short-circuit evaluation
+        - Preserve Python-like short-circuiting
+        - Preserve operand values: return the first falsy (for AND) or first truthy (for OR) operand value
+          with the special-case that None is coerced to False in the return when it would otherwise propagate
         """
         if isinstance(node.op, ast.And):
             # Short-circuit AND: return falsy operand value; treat None as False

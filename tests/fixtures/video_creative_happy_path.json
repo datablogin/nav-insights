@@ -1,0 +1,108 @@
+{
+  "analyzer": "VideoCreative",
+  "customer_id": "123-456-7890",
+  "analysis_period": {
+    "start_date": "2025-08-01T00:00:00",
+    "end_date": "2025-08-24T00:00:00"
+  },
+  "timestamp": "2025-08-24T15:30:00",
+  "summary": {
+    "total_video_creatives": 25,
+    "poor_performers_count": 3,
+    "top_performers_count": 5,
+    "total_video_spend_micros": 5420000000,
+    "average_view_rate": 0.18,
+    "priority_level": "HIGH"
+  },
+  "detailed_findings": {
+    "poor_performers": [
+      {
+        "creative_id": "12345",
+        "creative_name": "Summer Sale 30s",
+        "video_duration_seconds": 30,
+        "impressions": 45000,
+        "views": 5400,
+        "view_rate": 0.12,
+        "cost_micros": 892450000,
+        "conversions": 0,
+        "cpa_micros": "N/A",
+        "campaign": "Video Campaign",
+        "ad_group": "Summer Promotions",
+        "recommendation": "Low view rate (12%) - consider shorter duration or more engaging opening",
+        "performance_score": 0.12
+      },
+      {
+        "creative_id": "12346",
+        "creative_name": "Product Demo 45s",
+        "video_duration_seconds": 45,
+        "impressions": 38000,
+        "views": 4560,
+        "view_rate": 0.12,
+        "cost_micros": 1245780000,
+        "conversions": 2,
+        "cpa_micros": 622890000,
+        "campaign": "Product Videos",
+        "ad_group": "Demo Content",
+        "recommendation": "High cost per view - optimize targeting or shorten video",
+        "performance_score": 0.15
+      },
+      {
+        "creative_id": "12347",
+        "creative_name": "Brand Story 60s",
+        "video_duration_seconds": 60,
+        "impressions": 28000,
+        "views": 2240,
+        "view_rate": 0.08,
+        "cost_micros": 756340000,
+        "conversions": 1,
+        "cpa_micros": 756340000,
+        "campaign": "Brand Awareness",
+        "ad_group": "Story Content",
+        "recommendation": "Very low view rate (8%) - needs complete creative refresh",
+        "performance_score": 0.08
+      }
+    ],
+    "top_performers": [
+      {
+        "creative_id": "12348",
+        "creative_name": "Quick Tips 15s",
+        "video_duration_seconds": 15,
+        "impressions": 52000,
+        "views": 20800,
+        "view_rate": 0.40,
+        "cost_micros": 345670000,
+        "conversions": 28,
+        "cpa_micros": 12345000,
+        "campaign": "Tips & Tricks",
+        "ad_group": "Quick Content",
+        "recommendation": "Excellent performance - consider increasing budget",
+        "performance_score": 0.89
+      },
+      {
+        "creative_id": "12349",
+        "creative_name": "Customer Testimonial 20s",
+        "video_duration_seconds": 20,
+        "impressions": 41000,
+        "views": 14350,
+        "view_rate": 0.35,
+        "cost_micros": 289450000,
+        "conversions": 22,
+        "cpa_micros": 13156818,
+        "campaign": "Social Proof",
+        "ad_group": "Testimonials",
+        "recommendation": "Strong social proof element drives conversions",
+        "performance_score": 0.82
+      }
+    ],
+    "insights": [
+      "Shorter videos (15-20s) perform significantly better than longer formats",
+      "Social proof and testimonials drive higher engagement",
+      "Videos over 45 seconds show declining view rates"
+    ],
+    "recommendations": [
+      "Focus budget on 15-20 second video formats",
+      "Test more customer testimonial content",
+      "Refresh creative assets with poor performance scores"
+    ]
+  }
+}
