@@ -40,6 +40,7 @@ Pct01 = Rate01  # alias for clarity
 # Default currency - configurable via environment variable
 DEFAULT_CURRENCY = os.getenv("NAV_INSIGHTS_DEFAULT_CURRENCY", "USD")
 
+
 # ---------- Money with currency semantics ----------
 class Money(BaseModel):
     """Money type with amount and currency code, preserving Decimal precision"""
@@ -56,8 +57,6 @@ class Money(BaseModel):
         if self.amount < 0:
             raise ValueError("Money amount cannot be negative")
         return self
-
-
 
 
 # ---------- Dimensions / entity references ----------
