@@ -56,18 +56,24 @@ def generate_finding_id(base_id: str, *entity_parts: str) -> str:
     Creates a stable, unique ID by combining a base identifier with entity-specific
     parts and adding a hash suffix to prevent collisions.
 
+    Format guarantees:
+    - All parts converted to UPPERCASE with underscores as separators
+    - Special characters sanitized to underscores
+    - 8-character hexadecimal hash suffix for collision prevention
+    - Format: "BASE_ID_ENTITY1_ENTITY2_12345678"
+
     Args:
         base_id: Base identifier (e.g., "KW_UNDER", "COMPETITOR")
         *entity_parts: Variable entity identifiers (name, campaign, etc.)
 
     Returns:
-        str: Unique finding ID with hash suffix
+        str: Unique finding ID with format "SANITIZED_PARTS_HASH8"
 
     Examples:
         >>> generate_finding_id("KW_UNDER", "food delivery", "BROAD")
-        'KW_UNDER_a1b2c3d4'
+        'KW_UNDER_FOOD_DELIVERY_BROAD_a1b2c3d4'
         >>> generate_finding_id("COMPETITOR", "Cracker Barrel")
-        'COMPETITOR_e5f6g7h8'
+        'COMPETITOR_CRACKER_BARREL_e5f6g7h8'
     """
     if not base_id:
         raise ValidationError(
@@ -82,7 +88,7 @@ def generate_finding_id(base_id: str, *entity_parts: str) -> str:
 
     # Create deterministic hash from all parts
     hash_input = "|".join(str(part) for part in [base_id] + list(entity_parts))
-    hash_suffix = hashlib.md5(hash_input.encode("utf-8")).hexdigest()[:8]
+    hash_suffix = hashlib.sha256(hash_input.encode("utf-8")).hexdigest()[:8]
 
     return f"{combined}_{hash_suffix}"
 
@@ -109,13 +115,17 @@ def validate_non_negative_metrics(
 ) -> Dict[str, Decimal]:
     """Validate that specified metrics are non-negative and convert to Decimal.
 
+    Only returns metrics that are present, non-empty, and convertible to Decimal.
+    Missing, None, or "N/A" values are silently skipped. Callers should merge
+    the result into their metrics dictionary as needed.
+
     Args:
         metrics: Dictionary of metric name to value
         metric_names: List of metric names that must be non-negative
         parser_name: Name of parser for error context
 
     Returns:
-        Dict[str, Decimal]: Validated and converted metrics
+        Dict[str, Decimal]: Validated and converted metrics (subset of input)
 
     Raises:
         NegativeMetricError: If any specified metric is negative

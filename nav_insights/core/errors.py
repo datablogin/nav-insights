@@ -138,9 +138,9 @@ class NegativeMetricError(ValidationError):
             field_name=field_name,
             field_value=field_value,
             severity=Severity.high,
+            error_code=ErrorCode.NEGATIVE_METRIC_VALUE,
             **kwargs,
         )
-        self.error_code = ErrorCode.NEGATIVE_METRIC_VALUE
 
 
 def wrap_exception(
