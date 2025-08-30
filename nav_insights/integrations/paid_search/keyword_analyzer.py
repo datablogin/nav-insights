@@ -18,7 +18,7 @@ from ...core.ir_base import (
     EntityRef,
     Totals,
 )
-from .utils import map_priority_level
+from ...core.utils import map_priority_level
 
 
 class KeywordAnalyzerInput(BaseModel):
@@ -69,8 +69,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         summary = f"Underperforming keyword '{name}' ({match_type})"
         severity = map_priority_level(inp.summary.get("priority_level"))
 
-        # Build metrics, handling N/A values
-        # Ensure non-negative costs and conversions
+        # Build metrics, handling N/A values and ensuring non-negative values
         cost = Decimal(str(item.get("cost", 0)))
         conversions = Decimal(str(item.get("conversions", 0)))
         if cost < 0 or conversions < 0:
@@ -81,7 +80,6 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
                 severity="error",
                 context={"name": name, "cost": str(cost), "conversions": str(conversions)},
             )
-
         metrics: Dict[str, Decimal] = {
             "cost": cost,
             "conversions": conversions,
@@ -122,7 +120,7 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         recommendation = item.get("recommendation") or "Continue monitoring performance"
 
         summary = f"Top performing keyword '{name}' ({match_type})"
-        # Top performers typically have low severity since they're doing well
+        # Top performers typically have low severity since they're performing well
         severity = Severity.low
 
         # Build metrics
@@ -136,7 +134,6 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
                 severity="error",
                 context={"name": name, "cost": str(cost), "conversions": str(conversions)},
             )
-
         metrics: Dict[str, Decimal] = {
             "cost": cost,
             "conversions": conversions,
@@ -179,11 +176,13 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         }
 
     evidence = Evidence(source="paid_search_nav.keyword")
+
     try:
         finished_at = datetime.fromisoformat(inp.timestamp)
     except ValueError:
         # Fallback to current time if timestamp is malformed
         finished_at = datetime.now(timezone.utc)
+
     prov = AnalyzerProvenance(
         name=inp.analyzer,
         version="1.0.0",  # Version from the KeywordAnalyzer implementation
@@ -200,19 +199,3 @@ def parse_keyword_analyzer(data: Dict[str, Any]) -> AuditFindings:
         index=index,
     )
     return af
-
-
-def _map_priority(level: Any) -> Severity:
-    """Map analyzer priority levels to IR severity.
-
-    CRITICAL → high
-    HIGH → high
-    MEDIUM → medium
-    LOW → low
-    """
-    s = str(level or "").upper()
-    if s in ("CRITICAL", "HIGH"):
-        return Severity.high
-    if s == "MEDIUM":
-        return Severity.medium
-    return Severity.low

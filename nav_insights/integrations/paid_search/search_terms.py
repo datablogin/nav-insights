@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List
@@ -12,10 +13,11 @@ from ...core.ir_base import (
     Evidence,
     AnalyzerProvenance,
     Finding,
+    Severity,
     EntityRef,
     EntityType,
+    Totals,
 )
-from .utils import map_priority_level
 
 
 class SearchTermsInput(BaseModel):
@@ -79,7 +81,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         term = str(item.get("term", ""))
         kw = item.get("keyword_triggered")
         summary = f"Wasteful search term '{term}' — add negative"
-        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
+        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
 
         # Create entities as per spec
         entities = [EntityRef(type=EntityType.search_term, id=f"st:{term}", name=term)]
@@ -107,10 +109,10 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     for item in inp.detailed_findings.get("negative_keyword_suggestions") or []:
         neg = str(item.get("negative_keyword", ""))
         summary = f"Negative keyword suggestion '{neg}'"
-        severity = map_priority_level(inp.summary.get("priority_level") if inp.summary else None)
+        severity = _map_priority(inp.summary.get("priority_level") if inp.summary else None)
 
         # Build dims according to spec
-        dims = {}
+        dims: Dict[str, Any] = {}
         if item.get("match_type"):
             dims["match_type"] = str(item["match_type"])
         if item.get("reason"):
@@ -130,6 +132,7 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
         )
 
     evidence = Evidence(source="paid_search_nav.search_terms")
+
     try:
         finished_at = datetime.fromisoformat(timestamp)
     except ValueError:
@@ -145,9 +148,18 @@ def parse_search_terms(data: Dict[str, Any]) -> AuditFindings:
     af = AuditFindings(
         account=account,
         date_range=date_range,
-        totals={},
+        totals=Totals(),
         findings=findings,
         data_sources=[evidence],
         analyzers=[prov],
     )
     return af
+
+
+def _map_priority(level: Any) -> Severity:
+    s = str(level or "").lower()
+    if s in ("critical", "high"):
+        return "high"  # type: ignore[return-value]
+    if s == "medium":
+        return "medium"  # type: ignore[return-value]
+    return "low"  # type: ignore[return-value]

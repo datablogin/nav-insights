@@ -3,7 +3,7 @@ import ast
 import operator as op
 from typing import Any, Dict, Callable, Optional
 
-# Import exceptions from stable module to avoid class identity issues across reloads
+# Use stable exception classes to avoid identity changes on reload
 from .dsl_exceptions import (
     ExpressionError,
     ParseError,
@@ -248,20 +248,21 @@ class SafeEval(ast.NodeVisitor):
         if isinstance(node.op, ast.And):
             last_val = None
             for operand in node.values:
-                val = self.visit(operand)
-                if val is None:
+                result = self.visit(operand)
+                if result is None:
                     return False
-                if not val:
-                    return val
-                last_val = val
+                if not result:
+                    return result
+                last_val = result
             return last_val
         elif isinstance(node.op, ast.Or):
             last_val = None
             for operand in node.values:
-                val = self.visit(operand)
-                if val:
-                    return val
-                last_val = val
+                result = self.visit(operand)
+                if result:
+                    return result
+                last_val = result
+            # All falsy: coerce None to False
             return False if last_val is None else last_val
         else:
             raise UnsupportedNodeError(f"Boolean operator not allowed: {type(node.op).__name__}")
