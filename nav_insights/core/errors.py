@@ -48,7 +48,9 @@ class CoreError(Exception):
     def to_dict(self) -> Dict[str, Any]:
         data = {
             "error_code": self.error_code.name,
-            "severity": self.severity.value if hasattr(self.severity, "value") else str(self.severity),
+            "severity": self.severity.value
+            if hasattr(self.severity, "value")
+            else str(self.severity),
             "message": self.message,
             "context": self.context,
         }
@@ -113,7 +115,9 @@ class ValidationError(CoreError):
 
 
 class NegativeMetricError(CoreError):
-    def __init__(self, field_name: str, field_value: Any, *, context: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self, field_name: str, field_value: Any, *, context: Optional[Dict[str, Any]] = None
+    ) -> None:
         ctx = context.copy() if context else {}
         ctx.update({"field_name": field_name, "field_value": field_value})
         super().__init__(
@@ -125,7 +129,13 @@ class NegativeMetricError(CoreError):
 
 
 class ParserError(CoreError):
-    def __init__(self, message: str, *, parser_name: Optional[str] = None, context: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        parser_name: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
         ctx = context.copy() if context else {}
         if parser_name:
             ctx["parser_name"] = parser_name

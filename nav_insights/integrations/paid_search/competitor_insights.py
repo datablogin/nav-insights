@@ -72,10 +72,9 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
     global_severity = _map_priority((inp.summary or {}).get("priority_level"))
 
     # Primary competitors → one finding per item
-    for item in (inp.detailed_findings.get("primary_competitors") or []):
+    for item in inp.detailed_findings.get("primary_competitors") or []:
         competitor = str(item.get("competitor", "unknown"))
         competitor_clean = _sanitize_id(competitor, add_hash=True)
-
         # Create competitor entity
         competitor_entity = EntityRef(
             type=EntityType.other, id=f"competitor:{competitor_clean}", name=competitor
@@ -124,7 +123,7 @@ def parse_competitor_insights(data: Dict[str, Any]) -> AuditFindings:
         )
 
     # Keyword gaps → one finding per gap
-    for gap in (inp.detailed_findings.get("keyword_gaps") or []):
+    for gap in inp.detailed_findings.get("keyword_gaps") or []:
         keyword = str(gap.get("keyword", "unknown"))
         keyword_clean = _sanitize_id(keyword, add_hash=True)
         competitor_using = gap.get("competitor_using", []) or []
