@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Type
 from enum import Enum
 
+from .ir_base import Severity
 from . import dsl_exceptions as dslx
 
 
@@ -9,45 +10,62 @@ class CoreError(Exception):
     """Structured error used across core and integrations.
 
     Attributes:
-        code: Stable machine-readable code (e.g., 'resource_limit', 'invalid_metric')
-        category: High-level subsystem (e.g., 'dsl', 'parser.keyword', 'service')
-        severity: One of {'info','warning','error','critical'}
         message: Human-readable message
+        error_code: ErrorCode enum value
+        severity: Severity enum value or string (legacy)
         context: Optional structured context payload safe to log/serialize
+        original_error: Optional wrapped exception
+        code: Optional legacy string code
+        category: Optional legacy string category
     """
 
     def __init__(
         self,
-        code: str,
-        category: str,
-        message: str,
+        message: str = None,
+        error_code: "ErrorCode" = None,
+        severity: Severity | str = Severity.medium,
         *,
-        severity: str = "error",
         context: Optional[Dict[str, Any]] = None,
-        cause: Optional[BaseException] = None,
+        original_error: Optional[BaseException] = None,
+        # Legacy kwargs
+        code: Optional[str] = None,
+        category: Optional[str] = None,
+        **legacy_kwargs: Any,
     ) -> None:
-        super().__init__(message)
+        # Support legacy signature: CoreError(code=..., category=..., message=..., severity="error", context={})
+        if message is None and "message" in legacy_kwargs:
+            message = legacy_kwargs["message"]
+        super().__init__(message or "")
+        self.message = message or ""
+        self.error_code = error_code if error_code is not None else ErrorCode.UNKNOWN_ERROR
+        self.severity = severity
+        self.context = context or {}
+        self.original_error = original_error
+        # Legacy fields
         self.code = code
         self.category = category
-        self.severity = severity
-        self.message = message
-        self.context = context or {}
-        self.cause = cause
 
     def to_dict(self) -> Dict[str, Any]:
         data = {
-            "code": self.code,
-            "category": self.category,
-            "severity": self.severity,
+            "error_code": self.error_code.name,
+            "severity": self.severity.value if hasattr(self.severity, "value") else str(self.severity),
             "message": self.message,
             "context": self.context,
         }
-        if self.cause is not None:
-            data["cause"] = type(self.cause).__name__
+        if self.original_error is not None:
+            data["original_error"] = type(self.original_error).__name__
+        # Include legacy keys if present
+        if getattr(self, "code", None) is not None:
+            data["code"] = self.code
+        if getattr(self, "category", None) is not None:
+            data["category"] = self.category
         return data
 
     def __str__(self) -> str:  # pragma: no cover - convenience
-        return f"[{self.category}:{self.code}] {self.message}"
+        base = f"[{self.error_code.name}] {self.message}"
+        if self.original_error is not None:
+            return f"{base} (Original: {self.original_error})"
+        return base
 
 
 # Mapping of known exceptions to CoreError codes/categories
@@ -61,10 +79,12 @@ _DSL_EXCEPTION_MAP: Dict[Type[BaseException], Dict[str, str]] = {
 
 
 class ErrorCode(str, Enum):
-    validation_error = "validation_error"
-    negative_metric = "negative_metric"
-    parser_error = "parser_error"
-    unhandled_exception = "unhandled_exception"
+    INVALID_INPUT_DATA = "invalid_input_data"
+    INVALID_FIELD_VALUE = "invalid_field_value"
+    PARSER_ERROR = "parser_error"
+    NEGATIVE_METRIC_VALUE = "negative_metric_value"
+    MISSING_REQUIRED_FIELD = "missing_required_field"
+    UNKNOWN_ERROR = "unknown_error"
 
 
 class ValidationError(CoreError):
@@ -76,6 +96,7 @@ class ValidationError(CoreError):
         field_value: Any = None,
         context: Optional[Dict[str, Any]] = None,
         original_error: Optional[BaseException] = None,
+        error_code: Optional[ErrorCode] = None,
     ) -> None:
         ctx = context.copy() if context else {}
         if field_name is not None:
@@ -83,42 +104,36 @@ class ValidationError(CoreError):
         if field_value is not None:
             ctx["field_value"] = field_value
         super().__init__(
-            code=ErrorCode.validation_error.value,
-            category="core.validation",
             message=message,
-            severity="error",
+            error_code=error_code or ErrorCode.INVALID_FIELD_VALUE,
+            severity=Severity.medium,
             context=ctx,
-            cause=original_error,
+            original_error=original_error,
         )
 
 
 class NegativeMetricError(CoreError):
-    def __init__(
-        self,
-        *,
-        field_name: str,
-        field_value: Any,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    def __init__(self, field_name: str, field_value: Any, *, context: Optional[Dict[str, Any]] = None) -> None:
         ctx = context.copy() if context else {}
-        ctx.update({"field_name": field_name, "field_value": str(field_value)})
+        ctx.update({"field_name": field_name, "field_value": field_value})
         super().__init__(
-            code=ErrorCode.negative_metric.value,
-            category="core.validation",
             message=f"Negative value for metric '{field_name}': {field_value}",
-            severity="error",
+            error_code=ErrorCode.NEGATIVE_METRIC_VALUE,
+            severity=Severity.high,
             context=ctx,
         )
 
 
 class ParserError(CoreError):
-    def __init__(self, message: str, *, context: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, *, parser_name: Optional[str] = None, context: Optional[Dict[str, Any]] = None) -> None:
+        ctx = context.copy() if context else {}
+        if parser_name:
+            ctx["parser_name"] = parser_name
         super().__init__(
-            code=ErrorCode.parser_error.value,
-            category="parser",
             message=message,
-            severity="error",
-            context=context or {},
+            error_code=ErrorCode.PARSER_ERROR,
+            severity=Severity.high,
+            context=ctx,
         )
 
 
@@ -130,23 +145,40 @@ def to_core_error(exc: BaseException, *, default_category: str = "unknown") -> C
     """
     for etype, meta in _DSL_EXCEPTION_MAP.items():
         if isinstance(exc, etype):
-            return CoreError(
+            # Map DSL exceptions to CoreError with legacy code/category preserved
+            ce = CoreError(
+                message=str(exc),
+                error_code=ErrorCode.UNKNOWN_ERROR,
+                severity=Severity.high,
+                context={},
+                original_error=exc,
                 code=meta["code"],
                 category=meta["category"],
-                message=str(exc),
-                severity="error",
-                context={},
-                cause=exc,
             )
+            return ce
     return CoreError(
-        code=ErrorCode.unhandled_exception.value,
-        category=default_category,
         message=str(exc),
-        severity="error",
+        error_code=ErrorCode.UNKNOWN_ERROR,
+        severity=Severity.high,
         context={},
-        cause=exc,
+        original_error=exc,
+        code="unhandled_exception",
+        category=default_category,
     )
 
 
-# Backwards-compatible helper
-wrap_exception = to_core_error
+def wrap_exception(
+    exception: BaseException,
+    message: str,
+    error_code: ErrorCode = ErrorCode.UNKNOWN_ERROR,
+    severity: Severity = Severity.medium,
+    context: Optional[Dict[str, Any]] = None,
+) -> CoreError:
+    """Wrap an external exception in a CoreError with additional context."""
+    return CoreError(
+        message,
+        error_code,
+        severity,
+        context=context,
+        original_error=exception,
+    )
